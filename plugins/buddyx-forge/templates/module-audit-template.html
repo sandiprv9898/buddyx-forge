@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{TITLE}}</title>
+<style>
+:root{--bg:#0f172a;--surface:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#38bdf8;--success:#4ade80;--warning:#fbbf24;--danger:#f87171}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+.header{background:var(--surface);padding:20px 32px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
+.header h1{font-size:20px;font-weight:700}.header .meta{color:var(--muted);font-size:13px}
+.badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600}
+.badge-high{background:rgba(74,222,128,.15);color:var(--success)}.badge-medium{background:rgba(251,191,36,.15);color:var(--warning)}.badge-low{background:rgba(248,113,113,.15);color:var(--danger)}
+.nav{background:var(--surface);padding:12px 32px;border-bottom:1px solid var(--border);display:flex;gap:4px;flex-wrap:wrap;position:sticky;top:65px;z-index:99}
+.nav button{padding:6px 16px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:13px;transition:all .2s}
+.nav button:hover,.nav button.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.content{max-width:1400px;margin:0 auto;padding:24px 32px}
+.section{display:none;animation:fadeIn .3s ease}.section.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center}
+.summary-card .value{font-size:32px;font-weight:700;color:var(--accent)}.summary-card .label{font-size:13px;color:var(--muted);margin-top:4px}
+table{width:100%;border-collapse:collapse;margin:16px 0}
+th{background:var(--surface);padding:10px 14px;text-align:left;font-size:13px;font-weight:600;color:var(--muted);border-bottom:2px solid var(--border)}
+td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:14px}
+tr:hover td{background:rgba(56,189,248,.05)}
+code{background:var(--surface);padding:2px 6px;border-radius:4px;font-size:13px}
+.er-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;min-width:280px;max-width:400px;overflow:hidden;margin:8px}
+.er-card-header{background:var(--accent);color:var(--bg);padding:10px 16px;font-weight:700;font-size:14px}
+.er-col{padding:6px 16px;font-size:13px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
+.er-col .type{color:var(--muted);font-family:monospace;font-size:12px}
+.flow-step{padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin:8px 0}
+.flow-step .step-num{font-size:12px;font-weight:700;color:var(--accent)}
+h3{margin:20px 0 8px;color:var(--accent)}h4{margin:12px 0 6px;color:var(--muted)}
+.search-bar{padding:12px 32px;background:var(--surface);border-bottom:1px solid var(--border)}
+.search-bar input{width:100%;max-width:400px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;outline:none}
+.search-bar input:focus{border-color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="header"><div><h1>{{TITLE}}</h1><div class="meta">{{DATE}} &middot; {{DESCRIPTION}}</div></div></div>
+<div class="nav" id="nav">
+<button class="active" onclick="showSection('summary')">Summary</button>
+<button onclick="showSection('tables')">DB Tables</button>
+<button onclick="showSection('relationships')">Relationships</button>
+<button onclick="showSection('lineage')">Data Lineage</button>
+<button onclick="showSection('fieldmap')">Field Map</button>
+<button onclick="showSection('dataflow')">Data Flow</button>
+<button onclick="showSection('enums')">Enums</button>
+<button onclick="showSection('resources')">Resources</button>
+<button onclick="showSection('observers')">Observers</button>
+<button onclick="showSection('jobs')">Jobs</button>
+<button onclick="showSection('policies')">Policies</button>
+</div>
+<div class="search-bar"><input type="text" id="search" placeholder="Search across all sections..." oninput="filterAll(this.value)"></div>
+<div class="content">
+<div class="section active" id="section-summary"><div class="summary-grid" id="summary-cards"></div><div id="summary-warnings"></div></div>
+<div class="section" id="section-tables"><div id="tables-content"></div></div>
+<div class="section" id="section-relationships"><table id="rel-table"><thead><tr><th>From</th><th>Relation</th><th>To</th><th>FK</th><th>Confirmed</th></tr></thead><tbody></tbody></table></div>
+<div class="section" id="section-lineage"><table id="lin-table"><thead><tr><th>Confidence</th><th>UI Field</th><th>Source</th><th>Chain</th><th>Type</th></tr></thead><tbody></tbody></table></div>
+<div class="section" id="section-fieldmap"><table id="fm-table"><thead><tr><th>DB Column</th><th>Form</th><th>Table</th></tr></thead><tbody></tbody></table></div>
+<div class="section" id="section-dataflow"><div id="df-content"></div></div>
+<div class="section" id="section-enums"><div id="enum-content"></div></div>
+<div class="section" id="section-resources"><div id="res-content"></div></div>
+<div class="section" id="section-observers"><table id="obs-table"><thead><tr><th>Observer</th><th>Event</th><th>Side Effect</th></tr></thead><tbody></tbody></table></div>
+<div class="section" id="section-jobs"><div id="job-content"></div></div>
+<div class="section" id="section-policies"><table id="pol-table"><thead><tr><th>Policy</th><th>Method</th><th>Permission</th></tr></thead><tbody></tbody></table></div>
+</div>
+<script>
+const AUDIT_DATA = {};
+function showSection(id){document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active')});document.querySelectorAll('.nav button').forEach(function(b){b.classList.remove('active')});document.getElementById('section-'+id).classList.add('active');event.target.classList.add('active')}
+function filterAll(q){q=q.toLowerCase();document.querySelectorAll('table tbody tr').forEach(function(r){r.style.display=r.textContent.toLowerCase().includes(q)?'':'none'})}
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function renderSummary(d){if(!d.summary)return;var s=d.summary;var cards=[{v:s.modelCount||0,l:'Models'},{v:s.tableCount||0,l:'Tables'},{v:s.resourceCount||0,l:'Resources'},{v:s.jobCount||0,l:'Jobs'},{v:s.relationshipCount||0,l:'Relationships'},{v:s.lineageFieldCount||0,l:'Lineage Fields'}];document.getElementById('summary-cards').innerHTML=cards.map(function(c){return '<div class="summary-card"><div class="value">'+c.v+'</div><div class="label">'+esc(c.l)+'</div></div>'}).join('')}
+function renderTables(d){if(!d.tables)return;var el=document.getElementById('tables-content'),h='';for(var n in d.tables){var t=d.tables[n];h+='<h3>'+esc(n)+'</h3><div class="er-card" style="max-width:100%;min-width:auto"><div class="er-card-header">'+esc(n)+'</div>';if(t.columns){t.columns.forEach(function(c){h+='<div class="er-col"><span>'+esc(c.name)+'</span><span class="type">'+esc(c.type)+(c.nullable?' NULL':'')+(c.fk?' -> '+esc(c.fk):'')+'</span></div>'})}h+='</div>'}el.innerHTML=h}
+function renderRelationships(d){if(!d.relationships)return;document.querySelector('#rel-table tbody').innerHTML=d.relationships.map(function(r){return '<tr><td>'+esc(r.from)+'</td><td>'+esc(r.type)+'</td><td>'+esc(r.to)+'</td><td><code>'+esc(r.fk)+'</code></td><td>'+(r.confirmed?'<span class="badge badge-high">Yes</span>':'<span class="badge badge-low">No</span>')+'</td></tr>'}).join('')}
+function renderLineage(d){if(!d.lineage)return;document.querySelector('#lin-table tbody').innerHTML=d.lineage.map(function(l){return '<tr><td><span class="badge badge-'+l.confidence+'">'+esc(l.confidence)+'</span></td><td><code>'+esc(l.uiField)+'</code></td><td>'+esc(l.sourceTable+'.'+l.sourceColumn)+'</td><td>'+esc((l.chain||[]).join(' > '))+'</td><td>'+esc(l.type)+'</td></tr>'}).join('')}
+function renderFieldMap(d){if(!d.fieldMap)return;document.querySelector('#fm-table tbody').innerHTML=d.fieldMap.map(function(f){return '<tr><td><code>'+esc(f.dbColumn)+'</code></td><td>'+(f.formField?esc(f.formField.component)+(f.formField.required?' *':''):'--')+'</td><td>'+(f.tableColumn?esc(f.tableColumn.component)+(f.tableColumn.sortable?' ^':''):'--')+'</td></tr>'}).join('')}
+function renderDataFlow(d){if(!d.dataFlow)return;document.getElementById('df-content').innerHTML=d.dataFlow.map(function(f){return '<h3>'+esc(f.name)+'</h3>'+f.steps.map(function(s,i){return '<div class="flow-step"><span class="step-num">Step '+(i+1)+'</span><div>'+esc(s)+'</div></div>'}).join('')}).join('')}
+function renderEnums(d){if(!d.enums)return;var h='';for(var n in d.enums){var e=d.enums[n];h+='<h3>'+esc(n)+'</h3><table><thead><tr><th>Case</th><th>Value</th><th>Label</th></tr></thead><tbody>';if(e.cases){e.cases.forEach(function(c){h+='<tr><td>'+esc(c.name)+'</td><td>'+esc(String(c.value))+'</td><td>'+esc(c.label||'--')+'</td></tr>'})}h+='</tbody></table>'}document.getElementById('enum-content').innerHTML=h}
+function renderResources(d){if(!d.resources)return;var h='';for(var n in d.resources){var r=d.resources[n];h+='<h3>'+esc(n)+'</h3>';if(r.formFields&&r.formFields.length){h+='<h4>Form Fields</h4><table><thead><tr><th>Field</th><th>Component</th><th>Required</th></tr></thead><tbody>';r.formFields.forEach(function(f){h+='<tr><td>'+esc(f.name)+'</td><td>'+esc(f.component)+'</td><td>'+(f.required?'Y':'')+'</td></tr>'});h+='</tbody></table>'}if(r.tableColumns&&r.tableColumns.length){h+='<h4>Table Columns</h4><table><thead><tr><th>Column</th><th>Component</th><th>Sortable</th></tr></thead><tbody>';r.tableColumns.forEach(function(c){h+='<tr><td>'+esc(c.name)+'</td><td>'+esc(c.component)+'</td><td>'+(c.sortable?'Y':'')+'</td></tr>'});h+='</tbody></table>'}}document.getElementById('res-content').innerHTML=h}
+function renderObservers(d){if(!d.observers)return;var rows='';for(var n in d.observers){if(d.observers[n].events){d.observers[n].events.forEach(function(e){rows+='<tr><td>'+esc(n)+'</td><td>'+esc(e.event)+'</td><td>'+esc(e.sideEffect)+'</td></tr>'})}}document.querySelector('#obs-table tbody').innerHTML=rows}
+function renderJobs(d){if(!d.jobs)return;var h='';for(var n in d.jobs){var j=d.jobs[n];h+='<h3>'+esc(n)+'</h3><table><tbody><tr><td><b>Queue</b></td><td>'+esc(j.queue||'default')+'</td></tr><tr><td><b>Output</b></td><td>'+esc(j.output||'--')+'</td></tr><tr><td><b>Chunking</b></td><td>'+esc(j.chunking||'none')+'</td></tr></tbody></table>'}document.getElementById('job-content').innerHTML=h}
+function renderPolicies(d){if(!d.policies)return;var rows='';for(var n in d.policies){if(d.policies[n].permissions){d.policies[n].permissions.forEach(function(p){rows+='<tr><td>'+esc(n)+'</td><td>'+esc(p.method)+'</td><td><code>'+esc(p.permission)+'</code></td></tr>'})}}document.querySelector('#pol-table tbody').innerHTML=rows}
+document.addEventListener('DOMContentLoaded',function(){renderSummary(AUDIT_DATA);renderTables(AUDIT_DATA);renderRelationships(AUDIT_DATA);renderLineage(AUDIT_DATA);renderFieldMap(AUDIT_DATA);renderDataFlow(AUDIT_DATA);renderEnums(AUDIT_DATA);renderResources(AUDIT_DATA);renderObservers(AUDIT_DATA);renderJobs(AUDIT_DATA);renderPolicies(AUDIT_DATA)})
+</script>
+</body>
+</html>

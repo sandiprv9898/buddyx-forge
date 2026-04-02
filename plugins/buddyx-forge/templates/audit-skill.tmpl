@@ -1,0 +1,124 @@
+---
+name: {PROJECT_NAME}-audit
+description: Audit any module — shows DB schema, relationships, data lineage, resource mechanics, jobs, policies. Use when user says "/audit" or "audit" followed by a module name. Supports text and HTML output.
+---
+
+# Module Audit
+
+Audit any module in the {PROJECT_TITLE} project. 11 sections of deep analysis.
+
+## Trigger
+
+- `audit {domain}` — text output in conversation
+- `audit {domain} html` — interactive HTML report
+- `audit {domain} html fresh` — HTML, skip cache
+
+## Available Modules
+
+{DOMAIN_LIST}
+
+If module not recognized → show available modules list and stop.
+
+## Step 1: Resolve Files
+
+Read `.claude/skills/{PROJECT_NAME}/context/domain-map.md`. Find `## {module}` section. Extract files from `### Read/Write` and `### Read Only`.
+
+Fallback if not in domain-map: scan `app/` for files matching `*{module}*`.
+
+## Step 2: Parse Files
+
+### Models — for each model file, extract:
+- `$fillable` array (column names)
+- `$casts` array (enum casts especially)
+- Relationships: `belongsTo()`, `hasMany()`, `morphTo()` — note related model + FK column
+- Accessors: `get*Attribute()` methods — name + one-line summary
+- Boot events: `booted()` callbacks — event name + side effect
+- Observer: `#[ObservedBy()]` attribute → read observer file
+- Scopes: `#[ScopedBy()]` + `scope*()` methods
+- Traits: all `use TraitName;`
+
+### Resources (Filament) — for each resource file, extract:
+- Form fields: component type, field name, required, live, validation
+- Table columns: component, sortable, searchable, toggleable, formatStateUsing
+- Filters: type, options source, query effect
+- Actions: name, permission gate, side effect
+- Eager loading: `->with([...])` in query
+- Default sort, pagination
+
+### Jobs — for each job file, extract:
+- Queue traits, constructor params
+- handle() logic: query, output format, storage path
+- Chunking: chunk(), chunkById(), cursor()
+- failed() method: error handling
+
+### Policies — extract method to permission string mapping
+
+### Observers — extract event to side effect mapping
+
+## Step 3: Data Lineage
+
+For each form field and table column in resources:
+1. Parse dot-notation: `employee.department.name` → segments
+2. Walk relationship chain from resource model
+3. Verify final column exists (MCP schema or $fillable)
+4. Classify type: direct | fk_chain | accessor | computed | enum_transform
+5. Score confidence:
+   - **high**: FK confirmed in DB schema AND column verified
+   - **medium**: relationship method exists but no DB FK, or column verified but code-only
+   - **low**: partial chain (segment unresolved) or opaque accessor (>10 lines)
+
+## Step 4: Text Output (default)
+
+Present all 11 sections:
+
+1. **Summary** — model/table/resource/job counts + confidence scores + warnings
+2. **DB Tables** — columns, types, nullable, defaults, FKs, indexes
+3. **Relationships** — from → to with FK, type, confirmed status
+4. **Data Lineage** — UI field → source table.column with chain, type, confidence
+5. **Field Map** — DB column ↔ form field ↔ table column
+6. **Data Flow** — step-by-step for create/update/delete/export
+7. **Enums** — cases, values, labels, badge colors
+8. **Resources** — form fields, table columns, filters, actions, eager loading
+9. **Observers** — event → side effect table
+10. **Jobs** — queue, constructor, output, chunking, error handling
+11. **Policies** — method → permission string
+
+End: `Text audit complete. Run audit {module} html for interactive version.`
+
+## Step 5: HTML Output
+
+### Cache Check (skip if `fresh` flag)
+1. Read `.claude/audits/{module}/audit-meta.json`
+2. Compare file checksums (md5sum) with current files
+3. Check meta `version` field matches `"1"` — if mismatch, full re-scan
+4. All match → open existing: `xdg-open .claude/audits/{module}/{module}-audit.html`
+5. Some differ → re-scan changed files only
+
+### Build JSON
+Assemble all data into JSON with these top-level keys:
+`meta`, `summary`, `models`, `tables`, `relationships`, `lineage`, `fieldMap`, `dataFlow`, `enums`, `resources`, `observers`, `jobs`, `policies`
+
+### Generate HTML
+1. Read `.claude/templates/module-audit-template.html`
+2. Replace `const AUDIT_DATA = {};` with assembled JSON
+3. Replace `{{TITLE}}`, `{{DATE}}`, `{{DESCRIPTION}}`
+
+### Save and Open
+```bash
+mkdir -p .claude/audits/{module}
+xdg-open .claude/audits/{module}/{module}-audit.html
+```
+
+### Cache Save
+Write `.claude/audits/{module}/audit-meta.json`:
+```json
+{
+  "version": "1",
+  "domain": "{module}",
+  "generatedAt": "ISO-8601",
+  "branch": "current branch",
+  "checksums": {
+    "file/path.php": "md5hash"
+  }
+}
+```

@@ -1,0 +1,9 @@
+{
+  "name": "buddyx-forge",
+  "description": "Generate a complete multi-agent development system for Laravel projects",
+  "version": "1.0.0",
+  "author": {
+    "name": "Sandip Vanodiya"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,90 @@
+---
+name: health
+description: Validate buddyx-forge setup integrity. Checks agent frontmatter, hook scripts, memory, domain-map, settings.json. Returns a score 0-100. Use to verify setup or diagnose issues.
+---
+
+# /buddyx-forge:health
+
+Validate the `.claude/` setup and return a health score (0-100).
+
+## Process
+
+### Step 1: Detect Project
+
+Read `.claude/agents/` directory. Extract project name from any agent's frontmatter `name:` field (everything before the first hyphen-separated domain).
+
+### Step 2: Run All Checks
+
+Run each check. Track points earned out of 100.
+
+**Check 1: Agent YAML Frontmatter (10 points)**
+For each `.claude/agents/*.md`, verify file starts with `---` and contains `name:`, `description:`, `tools:`.
+All valid → 10 points. Any invalid → 0 points.
+
+**Check 2: Hook Scripts Executable (10 points)**
+```bash
+find .claude/scripts -name "*.sh" ! -perm -111 2>/dev/null
+```
+All executable → 10 points. Any non-executable → 0 points.
+
+**Check 3: Memory Directories Exist (5 points)**
+For each agent, check `.claude/agent-memory/{agent-name}/MEMORY.md` exists.
+All exist → 5 points. Any missing → 0 points.
+
+**Check 4: Domain Map Matches Disk (15 points)**
+Read `.claude/skills/{name}/context/domain-map.md`. For each non-glob file listed:
+```bash
+test -f "{file_path}"
+```
+All exist → 15 points. Deduct proportionally for missing files.
+
+**Check 5: settings.json Valid (10 points)**
+```bash
+python3 -c "import json; json.load(open('.claude/settings.json')); print('VALID')"
+```
+Valid → 10 points. Invalid → 0 points.
+
+**Check 6: No Disabled Hooks (5 points)**
+```bash
+find .claude/scripts -name "*.disabled" 2>/dev/null | wc -l
+```
+Zero → 5 points. Any → 0 points + list them.
+
+**Check 7: shared-learnings.md Size (5 points)**
+```bash
+wc -l < .claude/agent-memory/shared-learnings.md
+```
+Under 200 lines → 5 points. Over → 3 points + warn.
+
+**Check 8: Agent Memory Size (5 points)**
+Check each agent memory file. All under 180 lines → 5 points. Any over → 3 points + list.
+
+**Check 9: RULES.md Exists (10 points)**
+```bash
+test -s ".claude/skills/{name}/RULES.md"
+```
+Exists and non-empty → 10 points. Missing/empty → 0 points.
+
+**Check 10: Formatter Works (5 points)**
+Run the formatter with `--version` or `--help`. Exits 0 → 5 points. Fails → 0 + warn.
+
+**Check 11: jq Available (5 points)**
+```bash
+command -v jq >/dev/null 2>&1
+```
+Available → 5 points. Missing → 3 points + warn.
+
+**Check 12: No Orphan Files (15 points)**
+Scan `app/` for PHP files. Compare against domain-map. Zero orphans → 15 points. Deduct proportionally.
+
+### Step 3: Report
+
+```
+buddyx-forge Health Check: {score}/100
+
+{For each check: PASS/WARN/FAIL with details}
+
+{If score < 80: "Run /buddyx-forge:scan to fix orphan files and stale context."}
+{If score < 50: "Consider running /buddyx-forge --force to regenerate."}
+{If disabled hooks: "Re-enable: rename .disabled files back to .sh"}
+```

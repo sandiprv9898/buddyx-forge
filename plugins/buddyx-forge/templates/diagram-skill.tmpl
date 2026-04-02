@@ -1,0 +1,103 @@
+---
+name: diagram
+description: Generate interactive HTML diagrams from codebase analysis. Use when user says "diagram:" followed by a description. Supports ER, flowchart, sequence, architecture, and state diagrams.
+---
+
+# Diagram Generator
+
+Generate standalone HTML files with interactive Mermaid.js diagrams.
+
+## Trigger
+
+User says `diagram: <description>`. Examples:
+- `diagram: DB tables for {EXAMPLE_DOMAIN} module`
+- `diagram: task flow for PDF export`
+- `diagram: job pipeline for data processing`
+- `diagram: agent architecture`
+- `diagram: status workflow`
+
+## Step 1: Parse Request
+
+| Keywords | Diagram Type | Mermaid Syntax |
+|----------|-------------|----------------|
+| DB, tables, schema, model, relationship, ER | ER Diagram | Custom HTML (not Mermaid) |
+| flow, task, process, steps, decision | Flowchart | `graph TD` |
+| job, pipeline, queue, sequence, API, request | Sequence Diagram | `sequenceDiagram` |
+| architecture, module, agent, system, dependency | Architecture | `graph LR` |
+| status, state, approval, workflow, lifecycle | State Diagram | `stateDiagram-v2` |
+
+## Step 2: Gather Data
+
+**ER Diagram:** Read model files for relationships + $fillable. Use MCP database-schema if available.
+**Flowchart:** Read controller/action/job that initiates the flow. Trace execution path.
+**Sequence:** Read job/controller files. Identify actors. Map message flow.
+**Architecture:** Read .claude/agents/*.md for agent diagrams. Read app/ structure for module diagrams.
+**State:** Find the relevant enum. Read model/resource for transition logic.
+
+Data source priority: MCP schema (authoritative) > model code > inferred from relationships.
+If data source missing: render what's available, add note in diagram.
+
+## Step 3: Generate HTML
+
+Create standalone HTML file with Mermaid.js CDN, dark/light toggle, zoom/pan controls.
+
+### Mermaid Template
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DIAGRAM_TITLE</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; min-height: 100vh; }
+  .header { background: #16213e; padding: 16px 24px; border-bottom: 1px solid #0f3460; display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header .meta { font-size: 13px; color: #8892b0; }
+  .controls { padding: 12px 24px; background: #16213e; display: flex; gap: 8px; border-bottom: 1px solid #0f3460; }
+  .controls button { padding: 6px 14px; border-radius: 6px; border: 1px solid #0f3460; background: #1a1a2e; color: #e0e0e0; cursor: pointer; font-size: 13px; }
+  .controls button:hover { background: #0f3460; }
+  .diagram-container { padding: 24px; overflow: auto; min-height: calc(100vh - 120px); display: flex; justify-content: center; }
+  .mermaid { transform-origin: top center; transition: transform 0.2s; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>DIAGRAM_TITLE</h1>
+  <span class="meta">Generated: DIAGRAM_DATE</span>
+</div>
+<div class="controls">
+  <button onclick="zoom(1.2)">Zoom In</button>
+  <button onclick="zoom(0.8)">Zoom Out</button>
+  <button onclick="zoom(1, true)">Reset</button>
+</div>
+<div class="diagram-container">
+  <pre class="mermaid">
+MERMAID_CONTENT
+  </pre>
+</div>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+  let scale = 1;
+  function zoom(factor, reset) {
+    scale = reset ? 1 : scale * factor;
+    document.querySelector('.mermaid').style.transform = 'scale(' + scale + ')';
+  }
+</script>
+</body>
+</html>
+```
+
+For ER diagrams: use custom HTML with table cards showing columns, types, PK/FK indicators, and relationship lines between tables.
+
+## Step 4: Save and Open
+
+```bash
+mkdir -p .claude/diagrams
+xdg-open .claude/diagrams/{type}-{scope}-{date}.html
+```
+
+Tell user: `Diagram generated and opened. File: .claude/diagrams/{filename}.html`
