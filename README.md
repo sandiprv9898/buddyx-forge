@@ -13,7 +13,7 @@ Generate a complete multi-agent development system for any project. One command,
 ## Quick Start
 
 ```
-/buddyx-forge:init
+/buddyx-forge:setup
 ```
 
 Follow the interactive setup (10 questions). The Python generator creates everything — no manual file creation needed.
@@ -49,7 +49,7 @@ Follow the interactive setup (10 questions). The Python generator creates everyt
 
 | Command | Purpose |
 |---------|---------|
-| `/buddyx-forge:init` | First-time setup — asks 10 questions, generates all files |
+| `/buddyx-forge:setup` | First-time setup — asks 10 questions, generates all files |
 | `/buddyx-forge:scan` | Re-scan codebase, update domain-map + context packs |
 | `/buddyx-forge:health` | Validate setup integrity (score 0-100) |
 | `/buddyx-forge:add-domain X` | Add a new domain agent |
@@ -58,7 +58,7 @@ Follow the interactive setup (10 questions). The Python generator creates everyt
 
 ## Setup Questions
 
-The `/buddyx-forge:init` command asks:
+The `/buddyx-forge:setup` command asks:
 
 1. **Project name** — prefix for all agents (e.g., `myapp` → `myapp-auth`)
 2. **Domains/modules** — auto-detected from codebase, you confirm

@@ -1,6 +1,6 @@
 ---
-name: init
-description: Initialize buddyx-forge — set up a complete multi-agent development system. Asks 10 questions, runs Python generator, creates all files (.claude/ directory). Use /buddyx-forge:init to start fresh setup.
+name: setup
+description: Set up buddyx-forge — create a complete multi-agent development system. Asks 10 questions, runs Python generator, creates all files in .claude/ directory. Use /buddyx-forge:setup to start.
 ---
 
 # buddyx-forge
