@@ -1,89 +1,1318 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{TITLE}}</title>
 <style>
-:root{--bg:#0f172a;--surface:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#38bdf8;--success:#4ade80;--warning:#fbbf24;--danger:#f87171}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
-.header{background:var(--surface);padding:20px 32px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
-.header h1{font-size:20px;font-weight:700}.header .meta{color:var(--muted);font-size:13px}
-.badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600}
-.badge-high{background:rgba(74,222,128,.15);color:var(--success)}.badge-medium{background:rgba(251,191,36,.15);color:var(--warning)}.badge-low{background:rgba(248,113,113,.15);color:var(--danger)}
-.nav{background:var(--surface);padding:12px 32px;border-bottom:1px solid var(--border);display:flex;gap:4px;flex-wrap:wrap;position:sticky;top:65px;z-index:99}
-.nav button{padding:6px 16px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:13px;transition:all .2s}
-.nav button:hover,.nav button.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
-.content{max-width:1400px;margin:0 auto;padding:24px 32px}
-.section{display:none;animation:fadeIn .3s ease}.section.active{display:block}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
-.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center}
-.summary-card .value{font-size:32px;font-weight:700;color:var(--accent)}.summary-card .label{font-size:13px;color:var(--muted);margin-top:4px}
-table{width:100%;border-collapse:collapse;margin:16px 0}
-th{background:var(--surface);padding:10px 14px;text-align:left;font-size:13px;font-weight:600;color:var(--muted);border-bottom:2px solid var(--border)}
-td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:14px}
-tr:hover td{background:rgba(56,189,248,.05)}
-code{background:var(--surface);padding:2px 6px;border-radius:4px;font-size:13px}
-.er-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;min-width:280px;max-width:400px;overflow:hidden;margin:8px}
-.er-card-header{background:var(--accent);color:var(--bg);padding:10px 16px;font-weight:700;font-size:14px}
-.er-col{padding:6px 16px;font-size:13px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
-.er-col .type{color:var(--muted);font-family:monospace;font-size:12px}
-.flow-step{padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin:8px 0}
-.flow-step .step-num{font-size:12px;font-weight:700;color:var(--accent)}
-h3{margin:20px 0 8px;color:var(--accent)}h4{margin:12px 0 6px;color:var(--muted)}
-.search-bar{padding:12px 32px;background:var(--surface);border-bottom:1px solid var(--border)}
-.search-bar input{width:100%;max-width:400px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;outline:none}
-.search-bar input:focus{border-color:var(--accent)}
+/* ===== CSS Reset & Theme Variables ===== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root { --bg: #1a1a2e; --text: #e2e8f0; --card-bg: #252542; --header-bg: #6366f1; --header-text: #fff; --border: #334155; --row-hover: #2d2d4a; --pk: #f59e0b; --fk: #3b82f6; --nn: #ef4444; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --info: #3b82f6; --purple: #8b5cf6; --teal: #14b8a6; --orange: #f97316; --muted: #94a3b8; --tab-bg: #1e1e38; --tab-active: #6366f1; --input-bg: #1e1e38; }
+[data-theme="light"] { --bg: #f1f5f9; --text: #1e293b; --card-bg: #ffffff; --header-bg: #6366f1; --header-text: #fff; --border: #e2e8f0; --row-hover: #f8fafc; --muted: #64748b; --tab-bg: #e2e8f0; --tab-active: #6366f1; --input-bg: #ffffff; }
+
+/* ===== Base ===== */
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5; }
+a { color: var(--info); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ===== Header ===== */
+.page-header { background: var(--header-bg); color: var(--header-text); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.page-header h1 { font-size: 1.4rem; font-weight: 700; }
+.page-header .meta { font-size: 0.8rem; opacity: 0.85; margin-top: 2px; }
+.controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.controls input[type="text"] { padding: 6px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; background: rgba(255,255,255,0.15); color: #fff; font-size: 0.85rem; width: 180px; outline: none; }
+.controls input[type="text"]::placeholder { color: rgba(255,255,255,0.6); }
+.ctrl-btn { padding: 6px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; font-size: 0.8rem; transition: background 0.2s; white-space: nowrap; }
+.ctrl-btn:hover { background: rgba(255,255,255,0.25); }
+.ctrl-btn.active { background: rgba(255,255,255,0.3); font-weight: 600; }
+
+/* ===== Tabs ===== */
+.tab-bar { display: flex; gap: 0; background: var(--tab-bg); border-bottom: 2px solid var(--border); overflow-x: auto; padding: 0 16px; }
+.tab-bar button { padding: 10px 16px; border: none; background: none; color: var(--muted); cursor: pointer; font-size: 0.82rem; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: color 0.2s, border-color 0.2s; }
+.tab-bar button:hover { color: var(--text); }
+.tab-bar button.active { color: var(--header-bg); border-bottom-color: var(--tab-active); font-weight: 600; }
+.tab-panel { display: none; padding: 20px 24px; min-height: calc(100vh - 160px); }
+.tab-panel.active { display: block; }
+
+/* ===== Cards & Tables ===== */
+.card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+.card-header { padding: 12px 16px; font-weight: 600; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; border-bottom: 1px solid var(--border); }
+.card-header:hover { background: var(--row-hover); }
+.card-header .toggle-icon { transition: transform 0.2s; font-size: 0.75rem; color: var(--muted); }
+.card-header .toggle-icon.open { transform: rotate(90deg); }
+.card-body { padding: 16px; }
+.card-body.collapsed { display: none; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; text-align: center; }
+.stat-card .stat-value { font-size: 2rem; font-weight: 700; color: var(--header-bg); }
+.stat-card .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+table.data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+table.data-table th { background: var(--tab-bg); padding: 8px 12px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--border); cursor: pointer; white-space: nowrap; user-select: none; }
+table.data-table th:hover { color: var(--header-bg); }
+table.data-table th .sort-arrow { font-size: 0.7rem; margin-left: 4px; color: var(--muted); }
+table.data-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+table.data-table tr:hover td { background: var(--row-hover); }
+
+/* ===== Badges ===== */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.badge-pk { background: rgba(245,158,11,0.2); color: var(--pk); }
+.badge-fk { background: rgba(59,130,246,0.2); color: var(--fk); }
+.badge-nn { background: rgba(239,68,68,0.2); color: var(--nn); }
+.badge-success { background: rgba(16,185,129,0.2); color: var(--success); }
+.badge-warning { background: rgba(245,158,11,0.2); color: var(--warning); }
+.badge-danger { background: rgba(239,68,68,0.2); color: var(--danger); }
+.badge-info { background: rgba(59,130,246,0.2); color: var(--info); }
+.badge-purple { background: rgba(139,92,246,0.2); color: var(--purple); }
+.badge-teal { background: rgba(20,184,166,0.2); color: var(--teal); }
+.badge-orange { background: rgba(249,115,22,0.2); color: var(--orange); }
+.badge-muted { background: rgba(148,163,184,0.2); color: var(--muted); }
+.badge-readonly { background: rgba(148,163,184,0.15); color: var(--muted); border: 1px dashed var(--muted); }
+
+/* ===== Lineage Type Badges ===== */
+.lineage-type { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+.lineage-type.direct { background: rgba(16,185,129,0.2); color: var(--success); }
+.lineage-type.fk_chain { background: rgba(59,130,246,0.2); color: var(--fk); }
+.lineage-type.accessor { background: rgba(139,92,246,0.2); color: var(--purple); }
+.lineage-type.computed_aggregate { background: rgba(249,115,22,0.2); color: var(--orange); }
+.lineage-type.conditional_state { background: rgba(239,68,68,0.2); color: var(--danger); }
+.lineage-type.polymorphic { background: rgba(148,163,184,0.2); color: #94a3b8; }
+.lineage-type.belongs_to_many { background: rgba(20,184,166,0.2); color: var(--teal); }
+.lineage-type.enum_transform { background: rgba(245,158,11,0.2); color: var(--warning); }
+
+/* ===== Confidence Dots ===== */
+.confidence-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.confidence-dot.high { background: var(--success); }
+.confidence-dot.medium { background: var(--warning); }
+.confidence-dot.low { background: var(--danger); }
+
+/* ===== ER Diagram ===== */
+.er-canvas { position: relative; min-height: 600px; overflow: visible; }
+.er-table-card { position: absolute; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; min-width: 220px; max-width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: grab; user-select: none; z-index: 10; }
+.er-table-card:active { cursor: grabbing; z-index: 20; }
+.er-table-card.readonly { border-style: dashed; opacity: 0.85; }
+.er-table-header { padding: 8px 12px; font-weight: 700; font-size: 0.85rem; background: var(--header-bg); color: var(--header-text); border-radius: 7px 7px 0 0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.er-table-header .readonly-badge { font-size: 0.65rem; background: rgba(255,255,255,0.2); padding: 1px 6px; border-radius: 3px; }
+.er-col-row { padding: 4px 12px; font-size: 0.78rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); gap: 8px; }
+.er-col-row:last-child { border-bottom: none; }
+.er-col-name { font-family: 'SF Mono', 'Fira Code', monospace; font-weight: 500; }
+.er-col-meta { display: flex; gap: 4px; align-items: center; font-size: 0.7rem; color: var(--muted); }
+.er-lines-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+.er-lines-svg line { stroke: var(--muted); stroke-width: 1.5; }
+.er-lines-svg .fk-line { stroke: var(--fk); stroke-width: 2; }
+
+/* ===== Warning Banner ===== */
+.warning-banner { background: rgba(245,158,11,0.15); border: 1px solid var(--warning); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
+.warning-banner .warning-title { font-weight: 600; color: var(--warning); margin-bottom: 4px; }
+.warning-banner ul { padding-left: 20px; font-size: 0.85rem; }
+
+/* ===== Deps List ===== */
+.deps-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+
+/* ===== Enum Swatch ===== */
+.color-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: middle; margin-right: 4px; border: 1px solid var(--border); }
+
+/* ===== Modal ===== */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 200; justify-content: center; align-items: center; }
+.modal-overlay.open { display: flex; }
+.modal-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; max-width: 75vw; max-height: 75vh; overflow: auto; box-shadow: 0 12px 40px rgba(0,0,0,0.3); min-width: 400px; }
+.modal-header { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+.modal-close { border: none; background: none; color: var(--text); cursor: pointer; font-size: 1.3rem; padding: 0 4px; }
+.modal-body { padding: 16px 20px; }
+
+/* ===== Inline Chain Visual ===== */
+.chain-visual { margin: 8px 0 12px 0; padding: 12px; background: var(--tab-bg); border-radius: 6px; border: 1px solid var(--border); overflow-x: auto; }
+
+/* ===== Mermaid Container ===== */
+.mermaid-container { overflow-x: auto; padding: 16px; background: var(--tab-bg); border-radius: 8px; border: 1px solid var(--border); margin-top: 8px; }
+.mermaid-container svg { max-width: none; }
+
+/* ===== Lineage Filter Bar ===== */
+.filter-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+.filter-bar select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--input-bg); color: var(--text); font-size: 0.85rem; outline: none; }
+.filter-bar .toggle-btn { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text); cursor: pointer; font-size: 0.82rem; }
+.filter-bar .toggle-btn.active { background: var(--header-bg); color: #fff; border-color: var(--header-bg); }
+
+/* ===== Empty State ===== */
+.empty-state { text-align: center; padding: 48px 24px; color: var(--muted); font-size: 0.9rem; }
+
+/* ===== Nested Card ===== */
+.nested-card { margin: 8px 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.nested-card .card-header { padding: 8px 12px; font-size: 0.82rem; background: var(--tab-bg); }
+.nested-card .card-body { padding: 12px; }
+
+/* ===== Checkmark / X ===== */
+.check-yes { color: var(--success); font-weight: 700; }
+.check-no { color: var(--muted); }
+
+/* ===== Print Styles ===== */
+@media print {
+  .page-header, .tab-bar { position: static !important; }
+  .controls, .filter-bar { display: none !important; }
+  .tab-panel { display: block !important; page-break-inside: avoid; padding: 12px 0; }
+  .tab-panel::before { content: attr(data-tab-title); display: block; font-size: 1.2rem; font-weight: 700; margin-bottom: 12px; border-bottom: 2px solid #333; padding-bottom: 4px; }
+  .card-body.collapsed { display: block !important; }
+  .modal-overlay { display: none !important; }
+  body { background: #fff; color: #000; }
+  .card, .stat-card, .er-table-card { box-shadow: none; border-color: #ccc; }
+  .page-header { background: #333; }
+}
 </style>
 </head>
 <body>
-<div class="header"><div><h1>{{TITLE}}</h1><div class="meta">{{DATE}} &middot; {{DESCRIPTION}}</div></div></div>
-<div class="nav" id="nav">
-<button class="active" onclick="showSection('summary')">Summary</button>
-<button onclick="showSection('tables')">DB Tables</button>
-<button onclick="showSection('relationships')">Relationships</button>
-<button onclick="showSection('lineage')">Data Lineage</button>
-<button onclick="showSection('fieldmap')">Field Map</button>
-<button onclick="showSection('dataflow')">Data Flow</button>
-<button onclick="showSection('enums')">Enums</button>
-<button onclick="showSection('resources')">Resources</button>
-<button onclick="showSection('observers')">Observers</button>
-<button onclick="showSection('jobs')">Jobs</button>
-<button onclick="showSection('policies')">Policies</button>
+
+<!-- ===== Header ===== -->
+<div class="page-header">
+  <div>
+    <h1>{{TITLE}}</h1>
+    <div class="meta">{{DESCRIPTION}} &mdash; Generated: {{DATE}} | UMS HR System</div>
+  </div>
+  <div class="controls">
+    <input type="text" id="globalSearch" placeholder="Search...">
+    <button class="ctrl-btn" id="localeBtn">AR/EN</button>
+    <button class="ctrl-btn" id="themeBtn">Theme</button>
+    <button class="ctrl-btn" id="printBtn">Print</button>
+    <button class="ctrl-btn" id="exportBtn">Export JSON</button>
+  </div>
 </div>
-<div class="search-bar"><input type="text" id="search" placeholder="Search across all sections..." oninput="filterAll(this.value)"></div>
-<div class="content">
-<div class="section active" id="section-summary"><div class="summary-grid" id="summary-cards"></div><div id="summary-warnings"></div></div>
-<div class="section" id="section-tables"><div id="tables-content"></div></div>
-<div class="section" id="section-relationships"><table id="rel-table"><thead><tr><th>From</th><th>Relation</th><th>To</th><th>FK</th><th>Confirmed</th></tr></thead><tbody></tbody></table></div>
-<div class="section" id="section-lineage"><table id="lin-table"><thead><tr><th>Confidence</th><th>UI Field</th><th>Source</th><th>Chain</th><th>Type</th></tr></thead><tbody></tbody></table></div>
-<div class="section" id="section-fieldmap"><table id="fm-table"><thead><tr><th>DB Column</th><th>Form</th><th>Table</th></tr></thead><tbody></tbody></table></div>
-<div class="section" id="section-dataflow"><div id="df-content"></div></div>
-<div class="section" id="section-enums"><div id="enum-content"></div></div>
-<div class="section" id="section-resources"><div id="res-content"></div></div>
-<div class="section" id="section-observers"><table id="obs-table"><thead><tr><th>Observer</th><th>Event</th><th>Side Effect</th></tr></thead><tbody></tbody></table></div>
-<div class="section" id="section-jobs"><div id="job-content"></div></div>
-<div class="section" id="section-policies"><table id="pol-table"><thead><tr><th>Policy</th><th>Method</th><th>Permission</th></tr></thead><tbody></tbody></table></div>
+
+<!-- ===== Tab Bar ===== -->
+<div class="tab-bar" id="tabBar"></div>
+
+<!-- ===== Tab Panels ===== -->
+<div id="tabPanels"></div>
+
+<!-- ===== Modal ===== -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span id="modalTitle">Details</span>
+      <button class="modal-close" id="modalCloseBtn">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
 </div>
+
+<!-- ===== Audit Data (replaced by generator) ===== -->
+<script>const AUDIT_DATA = {};</script>
+
+<!-- ===== Mermaid Setup ===== -->
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: isDark ? 'dark' : 'default',
+    securityLevel: 'loose',
+    flowchart: { useMaxWidth: false, curve: 'cardinal', htmlLabels: true, nodeSpacing: 60, rankSpacing: 50 },
+    sequence: { useMaxWidth: false },
+    er: { useMaxWidth: false },
+    themeVariables: isDark ? {
+      primaryColor: '#6366f1', primaryTextColor: '#fff', primaryBorderColor: '#4f46e5',
+      lineColor: '#64748b', secondaryColor: '#1e293b', tertiaryColor: '#0f172a',
+      fontSize: '14px', fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+    } : {
+      primaryColor: '#6366f1', primaryTextColor: '#fff', primaryBorderColor: '#4f46e5',
+      lineColor: '#94a3b8', secondaryColor: '#f1f5f9', tertiaryColor: '#ffffff',
+      fontSize: '14px', fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+    }
+  });
+  let renderCounter = 0;
+  window.mermaidRender = async function(id, code) {
+    renderCounter++;
+    const uniqueId = id + '_' + renderCounter + '_' + Date.now();
+    try {
+      const { svg } = await mermaid.render(uniqueId, code);
+      return svg;
+    } catch (e) {
+      console.error('Mermaid render error:', e);
+      return '<div class="empty-state">Diagram render error: ' + e.message + '</div>';
+    }
+  };
+  window.mermaidReInit = function(dark) {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: dark ? 'dark' : 'default',
+      securityLevel: 'loose',
+      flowchart: { useMaxWidth: false, curve: 'cardinal', htmlLabels: true },
+      sequence: { useMaxWidth: false },
+      er: { useMaxWidth: false },
+      themeVariables: dark ? {
+        primaryColor: '#6366f1', primaryTextColor: '#fff', primaryBorderColor: '#4f46e5',
+        lineColor: '#64748b', secondaryColor: '#1e293b', tertiaryColor: '#0f172a',
+        fontSize: '14px', fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+      } : {
+        primaryColor: '#6366f1', primaryTextColor: '#fff', primaryBorderColor: '#4f46e5',
+        lineColor: '#94a3b8', secondaryColor: '#f1f5f9', tertiaryColor: '#ffffff',
+        fontSize: '14px', fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif'
+      }
+    });
+  };
+  window.mermaidReady = true;
+  if (window.onMermaidReady) window.onMermaidReady();
+</script>
+
+<!-- ===== Main Application Logic ===== -->
 <script>
-const AUDIT_DATA = {};
-function showSection(id){document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active')});document.querySelectorAll('.nav button').forEach(function(b){b.classList.remove('active')});document.getElementById('section-'+id).classList.add('active');event.target.classList.add('active')}
-function filterAll(q){q=q.toLowerCase();document.querySelectorAll('table tbody tr').forEach(function(r){r.style.display=r.textContent.toLowerCase().includes(q)?'':'none'})}
-function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
-function renderSummary(d){if(!d.summary)return;var s=d.summary;var cards=[{v:s.modelCount||0,l:'Models'},{v:s.tableCount||0,l:'Tables'},{v:s.resourceCount||0,l:'Resources'},{v:s.jobCount||0,l:'Jobs'},{v:s.relationshipCount||0,l:'Relationships'},{v:s.lineageFieldCount||0,l:'Lineage Fields'}];document.getElementById('summary-cards').innerHTML=cards.map(function(c){return '<div class="summary-card"><div class="value">'+c.v+'</div><div class="label">'+esc(c.l)+'</div></div>'}).join('')}
-function renderTables(d){if(!d.tables)return;var el=document.getElementById('tables-content'),h='';for(var n in d.tables){var t=d.tables[n];h+='<h3>'+esc(n)+'</h3><div class="er-card" style="max-width:100%;min-width:auto"><div class="er-card-header">'+esc(n)+'</div>';if(t.columns){t.columns.forEach(function(c){h+='<div class="er-col"><span>'+esc(c.name)+'</span><span class="type">'+esc(c.type)+(c.nullable?' NULL':'')+(c.fk?' -> '+esc(c.fk):'')+'</span></div>'})}h+='</div>'}el.innerHTML=h}
-function renderRelationships(d){if(!d.relationships)return;document.querySelector('#rel-table tbody').innerHTML=d.relationships.map(function(r){return '<tr><td>'+esc(r.from)+'</td><td>'+esc(r.type)+'</td><td>'+esc(r.to)+'</td><td><code>'+esc(r.fk)+'</code></td><td>'+(r.confirmed?'<span class="badge badge-high">Yes</span>':'<span class="badge badge-low">No</span>')+'</td></tr>'}).join('')}
-function renderLineage(d){if(!d.lineage)return;document.querySelector('#lin-table tbody').innerHTML=d.lineage.map(function(l){return '<tr><td><span class="badge badge-'+l.confidence+'">'+esc(l.confidence)+'</span></td><td><code>'+esc(l.uiField)+'</code></td><td>'+esc(l.sourceTable+'.'+l.sourceColumn)+'</td><td>'+esc((l.chain||[]).join(' > '))+'</td><td>'+esc(l.type)+'</td></tr>'}).join('')}
-function renderFieldMap(d){if(!d.fieldMap)return;document.querySelector('#fm-table tbody').innerHTML=d.fieldMap.map(function(f){return '<tr><td><code>'+esc(f.dbColumn)+'</code></td><td>'+(f.formField?esc(f.formField.component)+(f.formField.required?' *':''):'--')+'</td><td>'+(f.tableColumn?esc(f.tableColumn.component)+(f.tableColumn.sortable?' ^':''):'--')+'</td></tr>'}).join('')}
-function renderDataFlow(d){if(!d.dataFlow)return;document.getElementById('df-content').innerHTML=d.dataFlow.map(function(f){return '<h3>'+esc(f.name)+'</h3>'+f.steps.map(function(s,i){return '<div class="flow-step"><span class="step-num">Step '+(i+1)+'</span><div>'+esc(s)+'</div></div>'}).join('')}).join('')}
-function renderEnums(d){if(!d.enums)return;var h='';for(var n in d.enums){var e=d.enums[n];h+='<h3>'+esc(n)+'</h3><table><thead><tr><th>Case</th><th>Value</th><th>Label</th></tr></thead><tbody>';if(e.cases){e.cases.forEach(function(c){h+='<tr><td>'+esc(c.name)+'</td><td>'+esc(String(c.value))+'</td><td>'+esc(c.label||'--')+'</td></tr>'})}h+='</tbody></table>'}document.getElementById('enum-content').innerHTML=h}
-function renderResources(d){if(!d.resources)return;var h='';for(var n in d.resources){var r=d.resources[n];h+='<h3>'+esc(n)+'</h3>';if(r.formFields&&r.formFields.length){h+='<h4>Form Fields</h4><table><thead><tr><th>Field</th><th>Component</th><th>Required</th></tr></thead><tbody>';r.formFields.forEach(function(f){h+='<tr><td>'+esc(f.name)+'</td><td>'+esc(f.component)+'</td><td>'+(f.required?'Y':'')+'</td></tr>'});h+='</tbody></table>'}if(r.tableColumns&&r.tableColumns.length){h+='<h4>Table Columns</h4><table><thead><tr><th>Column</th><th>Component</th><th>Sortable</th></tr></thead><tbody>';r.tableColumns.forEach(function(c){h+='<tr><td>'+esc(c.name)+'</td><td>'+esc(c.component)+'</td><td>'+(c.sortable?'Y':'')+'</td></tr>'});h+='</tbody></table>'}}document.getElementById('res-content').innerHTML=h}
-function renderObservers(d){if(!d.observers)return;var rows='';for(var n in d.observers){if(d.observers[n].events){d.observers[n].events.forEach(function(e){rows+='<tr><td>'+esc(n)+'</td><td>'+esc(e.event)+'</td><td>'+esc(e.sideEffect)+'</td></tr>'})}}document.querySelector('#obs-table tbody').innerHTML=rows}
-function renderJobs(d){if(!d.jobs)return;var h='';for(var n in d.jobs){var j=d.jobs[n];h+='<h3>'+esc(n)+'</h3><table><tbody><tr><td><b>Queue</b></td><td>'+esc(j.queue||'default')+'</td></tr><tr><td><b>Output</b></td><td>'+esc(j.output||'--')+'</td></tr><tr><td><b>Chunking</b></td><td>'+esc(j.chunking||'none')+'</td></tr></tbody></table>'}document.getElementById('job-content').innerHTML=h}
-function renderPolicies(d){if(!d.policies)return;var rows='';for(var n in d.policies){if(d.policies[n].permissions){d.policies[n].permissions.forEach(function(p){rows+='<tr><td>'+esc(n)+'</td><td>'+esc(p.method)+'</td><td><code>'+esc(p.permission)+'</code></td></tr>'})}}document.querySelector('#pol-table tbody').innerHTML=rows}
-document.addEventListener('DOMContentLoaded',function(){renderSummary(AUDIT_DATA);renderTables(AUDIT_DATA);renderRelationships(AUDIT_DATA);renderLineage(AUDIT_DATA);renderFieldMap(AUDIT_DATA);renderDataFlow(AUDIT_DATA);renderEnums(AUDIT_DATA);renderResources(AUDIT_DATA);renderObservers(AUDIT_DATA);renderJobs(AUDIT_DATA);renderPolicies(AUDIT_DATA)})
+(function() {
+  'use strict';
+
+  /* ===================================================================
+   * STATE
+   * =================================================================*/
+  var activeTab = 'summary';
+  var currentLocale = 'en';
+  var searchQuery = '';
+  var sortStates = {};
+
+  /* ===================================================================
+   * TAB DEFINITIONS
+   * =================================================================*/
+  var TABS = [
+    { id: 'summary', label: 'Summary' },
+    { id: 'er-diagram', label: 'ER Diagram' },
+    { id: 'relationships', label: 'Relationships' },
+    { id: 'lineage', label: 'Lineage' },
+    { id: 'field-map', label: 'Field Map' },
+    { id: 'data-flow', label: 'Data Flow' },
+    { id: 'enums', label: 'Enums' },
+    { id: 'resources', label: 'Resources' },
+    { id: 'observers', label: 'Observers' },
+    { id: 'jobs', label: 'Jobs' },
+    { id: 'policies', label: 'Policies' }
+  ];
+
+  /* ===================================================================
+   * DOM HELPERS  (safe text escaping via textContent)
+   * =================================================================*/
+  var _escDiv = document.createElement('div');
+  function esc(str) {
+    if (str == null) return '';
+    _escDiv.textContent = String(str);
+    return _escDiv.innerHTML;
+  }
+
+  function matchesSearch(text) {
+    if (!searchQuery) return true;
+    return String(text).toLowerCase().indexOf(searchQuery.toLowerCase()) !== -1;
+  }
+
+  function sortRows(rows, col, dir) {
+    return rows.slice().sort(function(a, b) {
+      var keys = Object.keys(a);
+      var va = a[keys[col]] != null ? String(a[keys[col]]).toLowerCase() : '';
+      var vb = b[keys[col]] != null ? String(b[keys[col]]).toLowerCase() : '';
+      if (va < vb) return dir === 'asc' ? -1 : 1;
+      if (va > vb) return dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  /* ===================================================================
+   * REUSABLE TABLE BUILDER
+   * =================================================================*/
+  function makeSortableTable(tableId, headers, rows, rowRenderer) {
+    if (!rows || rows.length === 0) return '<div class="empty-state">No data available</div>';
+    var state = sortStates[tableId] || { col: null, dir: 'asc' };
+    var sorted = state.col != null ? sortRows(rows, state.col, state.dir) : rows;
+    if (searchQuery) {
+      sorted = sorted.filter(function(r) {
+        return Object.keys(r).some(function(k) { return matchesSearch(r[k]); });
+      });
+    }
+    var html = '<table class="data-table" data-table-id="' + esc(tableId) + '"><thead><tr>';
+    headers.forEach(function(h, i) {
+      var arrow = state.col === i ? (state.dir === 'asc' ? ' &#9650;' : ' &#9660;') : '';
+      html += '<th data-table-id="' + esc(tableId) + '" data-col="' + i + '">' + esc(h) + '<span class="sort-arrow">' + arrow + '</span></th>';
+    });
+    html += '</tr></thead><tbody>';
+    if (sorted.length === 0) {
+      html += '<tr><td colspan="' + headers.length + '" class="empty-state">No matching results</td></tr>';
+    } else {
+      sorted.forEach(function(r) { html += rowRenderer(r); });
+    }
+    html += '</tbody></table>';
+    return html;
+  }
+
+  /* ===================================================================
+   * EXPANDABLE CARD BUILDER
+   * =================================================================*/
+  function expandableCard(id, titleHtml, bodyHtml, extraHtml, startOpen) {
+    var open = startOpen ? true : false;
+    var extra = extraHtml ? '<span style="display:flex;gap:6px;align-items:center;">' + extraHtml + '</span>' : '';
+    return '<div class="card" id="card-' + esc(id) + '">' +
+      '<div class="card-header" data-toggle="' + esc(id) + '">' +
+        '<span>' + titleHtml + '</span>' +
+        '<span style="display:flex;gap:8px;align-items:center;">' + extra +
+          '<span class="toggle-icon' + (open ? ' open' : '') + '">&#9654;</span>' +
+        '</span>' +
+      '</div>' +
+      '<div class="card-body' + (open ? '' : ' collapsed') + '" id="body-' + esc(id) + '">' + bodyHtml + '</div>' +
+    '</div>';
+  }
+
+  function nestedExpandableCard(id, title, bodyHtml, startOpen) {
+    var open = startOpen ? true : false;
+    return '<div class="nested-card">' +
+      '<div class="card-header" data-toggle="' + esc(id) + '">' +
+        '<span>' + esc(title) + '</span>' +
+        '<span class="toggle-icon' + (open ? ' open' : '') + '">&#9654;</span>' +
+      '</div>' +
+      '<div class="card-body' + (open ? '' : ' collapsed') + '" id="body-' + esc(id) + '">' + bodyHtml + '</div>' +
+    '</div>';
+  }
+
+  /* ===================================================================
+   * BADGE / ICON HELPERS
+   * =================================================================*/
+  function badgeHtml(text, cls) {
+    return '<span class="badge ' + cls + '">' + esc(text) + '</span>';
+  }
+  function checkMark(val) {
+    return val ? '<span class="check-yes">&#10003;</span>' : '<span class="check-no">&mdash;</span>';
+  }
+  function confidenceDot(level) {
+    return '<span class="confidence-dot ' + esc(level || 'medium') + '" title="' + esc(level) + '"></span>';
+  }
+  function lineageTypeBadge(type) {
+    return '<span class="lineage-type ' + esc(type || '') + '">' + esc(type || 'unknown') + '</span>';
+  }
+  function colorSwatchBadge(colorName) {
+    var colorMap = {
+      success: '#10b981', warning: '#f59e0b', danger: '#ef4444', info: '#3b82f6',
+      primary: '#6366f1', secondary: '#64748b', gray: '#9ca3af', purple: '#8b5cf6'
+    };
+    var hex = colorMap[colorName] || colorName || '#888';
+    return '<span class="color-swatch" style="background:' + esc(hex) + '"></span>' + esc(colorName);
+  }
+
+  /* ===================================================================
+   * TAB 1 : SUMMARY
+   * =================================================================*/
+  function renderSummary(panel) {
+    var s = AUDIT_DATA.summary || {};
+    var html = '';
+
+    if (s.warnings && s.warnings.length > 0) {
+      html += '<div class="warning-banner"><div class="warning-title">Warnings</div><ul>';
+      s.warnings.forEach(function(w) { html += '<li>' + esc(w) + '</li>'; });
+      html += '</ul></div>';
+    }
+
+    var stats = [
+      { label: 'Models', value: s.modelCount || 0 },
+      { label: 'Tables', value: s.tableCount || 0 },
+      { label: 'Resources', value: s.resourceCount || 0 },
+      { label: 'Relationships', value: s.relationshipCount || 0 },
+      { label: 'Enums', value: s.enumCount || 0 },
+      { label: 'Jobs', value: s.jobCount || 0 },
+      { label: 'Observers', value: s.observerCount || 0 },
+      { label: 'Policies', value: s.policyCount || 0 }
+    ];
+    html += '<div class="stat-grid">';
+    stats.forEach(function(st) {
+      html += '<div class="stat-card"><div class="stat-value">' + st.value + '</div><div class="stat-label">' + esc(st.label) + '</div></div>';
+    });
+    html += '</div>';
+
+    if (s.readOnlyDeps && s.readOnlyDeps.length > 0) {
+      html += '<div style="margin-top:20px;"><h3 style="font-size:0.95rem;margin-bottom:8px;">Read-Only Dependencies</h3>';
+      html += '<div class="deps-list">';
+      s.readOnlyDeps.forEach(function(d) { html += badgeHtml(d, 'badge-readonly'); });
+      html += '</div></div>';
+    }
+
+    panel.innerHTML = html;
+  }
+
+  /* ===================================================================
+   * TAB 2 : ER DIAGRAM  (custom HTML cards + SVG FK lines + drag)
+   * =================================================================*/
+  function renderErDiagram(panel) {
+    var tables = AUDIT_DATA.tables || [];
+    if (tables.length === 0) { panel.innerHTML = '<div class="empty-state">No table data available</div>'; return; }
+
+    var readOnlyDeps = (AUDIT_DATA.summary || {}).readOnlyDeps || [];
+    var cols = Math.min(4, Math.max(2, Math.ceil(Math.sqrt(tables.length))));
+    var cardW = 260;
+    var cardGapX = 40;
+    var cardGapY = 30;
+
+    var html = '<div class="er-canvas" id="erCanvas">';
+    html += '<svg class="er-lines-svg" id="erSvg">' +
+      '<defs>' +
+        '<marker id="crowfoot-many" viewBox="0 0 12 12" refX="12" refY="6" markerWidth="12" markerHeight="12" orient="auto-start-reverse">' +
+          '<path d="M0,0 L12,6 L0,12" fill="none" stroke="var(--fk)" stroke-width="1.5"/>' +
+        '</marker>' +
+        '<marker id="crowfoot-one" viewBox="0 0 12 12" refX="12" refY="6" markerWidth="12" markerHeight="12" orient="auto-start-reverse">' +
+          '<line x1="10" y1="0" x2="10" y2="12" stroke="var(--fk)" stroke-width="2"/>' +
+        '</marker>' +
+      '</defs>' +
+    '</svg>';
+
+    // Pre-calculate per-row max heights for Y positioning
+    var rowMaxH = [];
+    for (var ri = 0; ri < Math.ceil(tables.length / cols); ri++) {
+      var maxH = 0;
+      for (var ci = 0; ci < cols && (ri * cols + ci) < tables.length; ci++) {
+        var t = tables[ri * cols + ci];
+        maxH = Math.max(maxH, 40 + ((t.columns || []).length * 28));
+      }
+      rowMaxH.push(maxH);
+    }
+
+    tables.forEach(function(t, idx) {
+      var isReadOnly = readOnlyDeps.indexOf(t.name) !== -1;
+      var row = Math.floor(idx / cols);
+      var col = idx % cols;
+      var x = 20 + col * (cardW + cardGapX);
+      var y = 20;
+      for (var rr = 0; rr < row; rr++) y += rowMaxH[rr] + cardGapY;
+
+      html += '<div class="er-table-card' + (isReadOnly ? ' readonly' : '') + '" ' +
+        'id="er-card-' + esc(t.name) + '" ' +
+        'data-table="' + esc(t.name) + '" ' +
+        'style="left:' + x + 'px;top:' + y + 'px;width:' + cardW + 'px;">';
+
+      html += '<div class="er-table-header" data-sample-table="' + esc(t.name) + '">' +
+        '<span>' + esc(t.name) + '</span>';
+      if (isReadOnly) html += '<span class="readonly-badge">Read Only</span>';
+      html += '</div>';
+
+      (t.columns || []).forEach(function(c) {
+        html += '<div class="er-col-row" data-col="' + esc(c.name) + '">' +
+          '<span class="er-col-name">' + esc(c.name) + '</span>' +
+          '<span class="er-col-meta">' +
+            '<span>' + esc(c.type) + '</span>';
+        if (c.isPrimaryKey) html += ' ' + badgeHtml('PK', 'badge-pk');
+        if (c.isForeignKey) html += ' ' + badgeHtml('FK', 'badge-fk');
+        if (c.nullable === false && !c.isPrimaryKey) html += ' ' + badgeHtml('NN', 'badge-nn');
+        html += '</span></div>';
+      });
+
+      html += '</div>';
+    });
+
+    // Canvas sizing
+    var totalH = 20;
+    rowMaxH.forEach(function(h) { totalH += h + cardGapY; });
+    var canvasW = cols * (cardW + cardGapX) + 60;
+    html += '</div>';
+    html = html.replace('id="erCanvas"', 'id="erCanvas" style="width:' + canvasW + 'px;height:' + totalH + 'px;"');
+
+    panel.innerHTML = html;
+
+    // Draw FK lines after DOM ready
+    requestAnimationFrame(function() { drawErLines(); });
+  }
+
+  function drawErLines() {
+    var svg = document.getElementById('erSvg');
+    if (!svg) return;
+    var old = svg.querySelectorAll('line');
+    for (var i = 0; i < old.length; i++) old[i].remove();
+
+    var tables = AUDIT_DATA.tables || [];
+    var canvas = document.getElementById('erCanvas');
+    if (!canvas) return;
+    var canvasRect = canvas.getBoundingClientRect();
+
+    tables.forEach(function(t) {
+      (t.columns || []).forEach(function(c) {
+        if (!c.isForeignKey || !c.references) return;
+        var srcCard = document.getElementById('er-card-' + t.name);
+        var tgtCard = document.getElementById('er-card-' + c.references.table);
+        if (!srcCard || !tgtCard) return;
+
+        var srcRow = srcCard.querySelector('[data-col="' + c.name + '"]');
+        var tgtCol = c.references.column || 'Id';
+        var tgtRow = tgtCard.querySelector('[data-col="' + tgtCol + '"]');
+        if (!srcRow) return;
+
+        var srcRect = srcRow.getBoundingClientRect();
+        var tgtRect = tgtRow ? tgtRow.getBoundingClientRect() : tgtCard.getBoundingClientRect();
+
+        var x1 = srcRect.right - canvasRect.left;
+        var y1 = srcRect.top + srcRect.height / 2 - canvasRect.top;
+        var x2 = tgtRect.left - canvasRect.left;
+        var y2 = tgtRect.top + tgtRect.height / 2 - canvasRect.top;
+
+        var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('class', 'fk-line');
+        line.setAttribute('marker-end', 'url(#crowfoot-many)');
+        line.setAttribute('marker-start', 'url(#crowfoot-one)');
+        svg.appendChild(line);
+      });
+    });
+  }
+
+  /* ER card drag logic */
+  var erDrag = null;
+  function erDragStart(e, tableName) {
+    if (e.target.closest('.er-table-header')) return;
+    var card = document.getElementById('er-card-' + tableName);
+    if (!card) return;
+    e.preventDefault();
+    erDrag = { card: card, startX: e.clientX, startY: e.clientY, origLeft: parseInt(card.style.left), origTop: parseInt(card.style.top) };
+    document.addEventListener('mousemove', erDragMove);
+    document.addEventListener('mouseup', erDragEnd);
+  }
+  function erDragMove(e) {
+    if (!erDrag) return;
+    erDrag.card.style.left = (erDrag.origLeft + e.clientX - erDrag.startX) + 'px';
+    erDrag.card.style.top = (erDrag.origTop + e.clientY - erDrag.startY) + 'px';
+    drawErLines();
+  }
+  function erDragEnd() {
+    erDrag = null;
+    document.removeEventListener('mousemove', erDragMove);
+    document.removeEventListener('mouseup', erDragEnd);
+  }
+
+  /* ===================================================================
+   * TAB 3 : RELATIONSHIPS  (Mermaid graph LR + table)
+   * =================================================================*/
+  async function renderRelationships(panel) {
+    var rels = AUDIT_DATA.relationships || [];
+    if (rels.length === 0) { panel.innerHTML = '<div class="empty-state">No relationships data available</div>'; return; }
+
+    // Build unique node declarations
+    var nodeSet = {};
+    var mermaidCode = 'graph LR\n';
+    rels.forEach(function(r) {
+      var fromId = r.from.replace(/[^a-zA-Z0-9_]/g, '_');
+      var toId = r.to.replace(/[^a-zA-Z0-9_]/g, '_');
+      if (!nodeSet[fromId]) { mermaidCode += '    ' + fromId + '["' + r.from + '"]\n'; nodeSet[fromId] = true; }
+      if (!nodeSet[toId]) { mermaidCode += '    ' + toId + '["' + r.to + '"]\n'; nodeSet[toId] = true; }
+      var label = r.method + '(): ' + r.type;
+      var style = r.crossModule ? '-.->' : '-->';
+      mermaidCode += '    ' + fromId + ' ' + style + '|"' + label.replace(/"/g, "'") + '"| ' + toId + '\n';
+    });
+    // Cross-module styling
+    var crossNodes = {};
+    rels.forEach(function(r) { if (r.crossModule) crossNodes[r.to.replace(/[^a-zA-Z0-9_]/g, '_')] = true; });
+    var crossKeys = Object.keys(crossNodes);
+    if (crossKeys.length > 0) {
+      mermaidCode += '    classDef crossModule fill:#f97316,stroke:#ea580c,color:#fff\n';
+      crossKeys.forEach(function(n) { mermaidCode += '    class ' + n + ' crossModule\n'; });
+    }
+
+    var html = '<div class="mermaid-container" id="rel-mermaid-box"></div>';
+    html += '<div style="margin-top:16px;">';
+    html += makeSortableTable('rel-table',
+      ['From', 'To', 'Type', 'Method', 'FK', 'Cross-Module'],
+      rels,
+      function(r) {
+        return '<tr>' +
+          '<td>' + esc(r.from) + '</td>' +
+          '<td>' + esc(r.to) + '</td>' +
+          '<td>' + badgeHtml(r.type, 'badge-purple') + '</td>' +
+          '<td><code>' + esc(r.method) + '()</code></td>' +
+          '<td><code>' + esc(r.foreignKey || '') + '</code></td>' +
+          '<td>' + (r.crossModule ? badgeHtml('Yes', 'badge-orange') : '<span class="check-no">&mdash;</span>') + '</td>' +
+        '</tr>';
+      }
+    );
+    html += '</div>';
+    panel.innerHTML = html;
+
+    // Render mermaid async
+    await renderMermaidInto('rel-mermaid-box', mermaidCode);
+  }
+
+  /* ===================================================================
+   * TAB 4 : DATA LINEAGE  (table + chain visual + reverse)
+   * =================================================================*/
+  var _lineageRows = [];
+
+  function renderLineage(panel) {
+    var lineageData = AUDIT_DATA.lineage || {};
+    var resources = Object.keys(lineageData);
+    if (resources.length === 0) { panel.innerHTML = '<div class="empty-state">No lineage data available</div>'; return; }
+
+    _lineageRows = [];
+    resources.forEach(function(res) {
+      (lineageData[res] || []).forEach(function(item) {
+        var row = {};
+        for (var k in item) row[k] = item[k];
+        row.resource = res;
+        _lineageRows.push(row);
+      });
+    });
+
+    var html = '<div class="filter-bar">' +
+      '<select id="lineageResourceFilter">' +
+      '<option value="">All Resources</option>';
+    resources.forEach(function(r) { html += '<option value="' + esc(r) + '">' + esc(r) + '</option>'; });
+    html += '</select>' +
+      '<button class="toggle-btn active" id="lineageViewTable" data-lineage-view="table">Table View</button>' +
+      '<button class="toggle-btn" id="lineageViewReverse" data-lineage-view="reverse">Reverse View</button>' +
+    '</div>';
+
+    // Table view
+    html += '<div id="lineageTableView">';
+    html += '<table class="data-table"><thead><tr>' +
+      '<th>Confidence</th><th>UI Field</th><th>Resource</th><th>Source</th><th>Type</th><th>Chain</th>' +
+    '</tr></thead><tbody>';
+    _lineageRows.forEach(function(r, i) {
+      var uiField = (r.localeVariants && r.localeVariants[currentLocale])
+        ? (r.localeVariants[currentLocale].label || r.uiField) : r.uiField;
+      html += '<tr class="lineage-row" data-resource="' + esc(r.resource) + '" data-idx="' + i + '" style="cursor:pointer;">' +
+        '<td>' + confidenceDot(r.confidence) + esc(r.confidence) + '</td>' +
+        '<td>' + esc(uiField) + '</td>' +
+        '<td>' + esc(r.resource) + '</td>' +
+        '<td><code>' + esc(r.sourceTable) + '.' + esc(r.sourceColumn) + '</code></td>' +
+        '<td>' + lineageTypeBadge(r.type) + '</td>' +
+        '<td><code>' + esc((r.chain || []).join(' -> ')) + '</code></td>' +
+      '</tr>' +
+      '<tr class="chain-row" id="chain-row-' + i + '" style="display:none;">' +
+        '<td colspan="6"><div class="chain-visual" id="chain-visual-' + i + '"></div></td>' +
+      '</tr>';
+    });
+    html += '</tbody></table></div>';
+
+    // Reverse view
+    html += '<div id="lineageReverseView" style="display:none;">';
+    var bySource = {};
+    _lineageRows.forEach(function(r) {
+      var key = (r.sourceTable || '?') + '.' + (r.sourceColumn || '?');
+      if (!bySource[key]) bySource[key] = [];
+      bySource[key].push(r);
+    });
+    Object.keys(bySource).sort().forEach(function(src) {
+      var items = bySource[src];
+      var body = '<table class="data-table"><thead><tr><th>UI Field</th><th>Resource</th><th>Type</th><th>Confidence</th></tr></thead><tbody>';
+      items.forEach(function(r) {
+        body += '<tr><td>' + esc(r.uiField) + '</td><td>' + esc(r.resource) + '</td><td>' + lineageTypeBadge(r.type) + '</td><td>' + confidenceDot(r.confidence) + esc(r.confidence) + '</td></tr>';
+      });
+      body += '</tbody></table>';
+      html += expandableCard('rev-' + src.replace(/[^a-zA-Z0-9]/g, '_'), '<code>' + esc(src) + '</code> &mdash; ' + items.length + ' UI field(s)', body, '', true);
+    });
+    html += '</div>';
+
+    panel.innerHTML = html;
+  }
+
+  function filterLineageRows() {
+    var sel = document.getElementById('lineageResourceFilter');
+    var val = sel ? sel.value : '';
+    var rows = document.querySelectorAll('.lineage-row');
+    var chains = document.querySelectorAll('.chain-row');
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].style.display = (!val || rows[i].getAttribute('data-resource') === val) ? '' : 'none';
+    }
+    for (var j = 0; j < chains.length; j++) chains[j].style.display = 'none';
+  }
+
+  function setLineageView(view) {
+    var tv = document.getElementById('lineageTableView');
+    var rv = document.getElementById('lineageReverseView');
+    var btnT = document.getElementById('lineageViewTable');
+    var btnR = document.getElementById('lineageViewReverse');
+    if (view === 'reverse') {
+      if (tv) tv.style.display = 'none';
+      if (rv) rv.style.display = 'block';
+      if (btnT) btnT.classList.remove('active');
+      if (btnR) btnR.classList.add('active');
+    } else {
+      if (tv) tv.style.display = 'block';
+      if (rv) rv.style.display = 'none';
+      if (btnT) btnT.classList.add('active');
+      if (btnR) btnR.classList.remove('active');
+    }
+  }
+
+  async function showChainVisual(idx) {
+    var row = document.getElementById('chain-row-' + idx);
+    var container = document.getElementById('chain-visual-' + idx);
+    if (!row || !container) return;
+    if (row.style.display !== 'none') { row.style.display = 'none'; return; }
+    var allChains = document.querySelectorAll('.chain-row');
+    for (var i = 0; i < allChains.length; i++) allChains[i].style.display = 'none';
+    row.style.display = '';
+
+    var item = _lineageRows[idx];
+    if (!item || !item.chain || item.chain.length === 0) {
+      container.textContent = 'No chain data';
+      return;
+    }
+
+    var code = 'graph LR\n';
+    item.chain.forEach(function(step, si) {
+      code += '    n' + si + '["' + step.replace(/"/g, "'") + '"]\n';
+      if (si > 0) code += '    n' + (si - 1) + ' --> n' + si + '\n';
+    });
+    if (item.chain.length > 0) {
+      code += '    style n0 fill:#3b82f6,stroke:#2563eb,color:#fff\n';
+      if (item.chain.length > 1)
+        code += '    style n' + (item.chain.length - 1) + ' fill:#10b981,stroke:#059669,color:#fff\n';
+      for (var m = 1; m < item.chain.length - 1; m++)
+        code += '    style n' + m + ' fill:#8b5cf6,stroke:#7c3aed,color:#fff\n';
+    }
+
+    await renderMermaidInto('chain-visual-' + idx, code);
+  }
+
+  /* ===================================================================
+   * TAB 5 : FIELD MAP
+   * =================================================================*/
+  function renderFieldMap(panel) {
+    var fields = AUDIT_DATA.fieldMap || [];
+    if (fields.length === 0) { panel.innerHTML = '<div class="empty-state">No field map data available</div>'; return; }
+    panel.innerHTML = makeSortableTable('field-map-table',
+      ['DB Column', 'Table', 'Type', 'Form Component', 'Table Column', 'Export'],
+      fields,
+      function(r) {
+        return '<tr>' +
+          '<td><code>' + esc(r.dbColumn) + '</code></td>' +
+          '<td>' + esc(r.table) + '</td>' +
+          '<td>' + badgeHtml(r.type || '', 'badge-muted') + '</td>' +
+          '<td>' + esc(r.formComponent || '') + '</td>' +
+          '<td>' + esc(r.tableColumn || '') + '</td>' +
+          '<td>' + checkMark(r.usedInExport) + '</td>' +
+        '</tr>';
+      }
+    );
+  }
+
+  /* ===================================================================
+   * TAB 6 : DATA FLOW  (expandable cards + Mermaid flowcharts)
+   * =================================================================*/
+  async function renderDataFlow(panel) {
+    var flows = AUDIT_DATA.dataFlow || [];
+    if (flows.length === 0) { panel.innerHTML = '<div class="empty-state">No data flow information available</div>'; return; }
+    var html = '';
+    var mermaidQueue = [];
+
+    flows.forEach(function(flow, i) {
+      var body = '<div style="margin-bottom:8px;font-size:0.85rem;color:var(--muted);">Trigger: ' + esc(flow.trigger || 'N/A') + '</div>';
+      if (flow.steps && flow.steps.length > 0) {
+        var code = 'graph TD\n';
+        flow.steps.forEach(function(step, si) {
+          var label = (step.actor || '') + ': ' + (step.action || '');
+          code += '    step' + si + '["' + label.replace(/"/g, "'") + '"]\n';
+          if (si > 0) code += '    step' + (si - 1) + ' --> step' + si + '\n';
+        });
+        var containerId = 'flow-mermaid-' + i;
+        body += '<div class="mermaid-container" id="' + containerId + '"></div>';
+        mermaidQueue.push({ id: containerId, code: code });
+
+        body += '<table class="data-table" style="margin-top:12px;"><thead><tr><th>#</th><th>Actor</th><th>Action</th></tr></thead><tbody>';
+        flow.steps.forEach(function(step, si) {
+          body += '<tr><td>' + (si + 1) + '</td><td>' + esc(step.actor) + '</td><td>' + esc(step.action) + '</td></tr>';
+        });
+        body += '</tbody></table>';
+      }
+      html += expandableCard('flow-' + i, esc(flow.name || 'Flow ' + (i + 1)), body, badgeHtml(flow.type || 'flowchart', 'badge-info'), i === 0);
+    });
+
+    panel.innerHTML = html;
+    for (var q = 0; q < mermaidQueue.length; q++) {
+      await renderMermaidInto(mermaidQueue[q].id, mermaidQueue[q].code);
+    }
+  }
+
+  /* ===================================================================
+   * TAB 7 : ENUMS
+   * =================================================================*/
+  function renderEnums(panel) {
+    var enums = AUDIT_DATA.enums || [];
+    if (enums.length === 0) { panel.innerHTML = '<div class="empty-state">No enum data available</div>'; return; }
+    var html = '';
+    enums.forEach(function(en, i) {
+      var body = '';
+      if (en.values && en.values.length > 0) {
+        body += '<table class="data-table"><thead><tr><th>Case</th><th>Value</th><th>Label</th><th>Badge Color</th></tr></thead><tbody>';
+        en.values.forEach(function(v) {
+          body += '<tr><td><code>' + esc(v.name) + '</code></td><td>' + esc(v.value) + '</td><td>' + esc(v.label || '') + '</td>' +
+            '<td>' + (v.badgeColor ? colorSwatchBadge(v.badgeColor) : '<span class="check-no">&mdash;</span>') + '</td></tr>';
+        });
+        body += '</tbody></table>';
+      }
+      if (en.usedIn && en.usedIn.length > 0) {
+        body += '<div style="margin-top:12px;"><strong style="font-size:0.82rem;">Used In:</strong><div class="deps-list">';
+        en.usedIn.forEach(function(u) { body += badgeHtml(u, 'badge-muted'); });
+        body += '</div></div>';
+      }
+      html += expandableCard('enum-' + i, esc(en.name || 'Enum'), body, badgeHtml(en.type || 'enum', 'badge-purple'), false);
+    });
+    panel.innerHTML = html;
+  }
+
+  /* ===================================================================
+   * TAB 8 : RESOURCES  (nested expandable sub-sections)
+   * =================================================================*/
+  function renderResources(panel) {
+    var resources = AUDIT_DATA.resources || [];
+    if (resources.length === 0) { panel.innerHTML = '<div class="empty-state">No resource data available</div>'; return; }
+    var html = '';
+
+    resources.forEach(function(res, ri) {
+      var body = '';
+      var uid = 'res-' + ri;
+
+      // Form Fields
+      if (res.form && res.form.fields && res.form.fields.length > 0) {
+        var fHtml = '<table class="data-table"><thead><tr><th>Name</th><th>Type</th><th>Required</th><th>Span</th></tr></thead><tbody>';
+        res.form.fields.forEach(function(f) {
+          fHtml += '<tr><td>' + esc(f.name || '') + '</td><td>' + badgeHtml(f.type || '', 'badge-info') + '</td><td>' + checkMark(f.required) + '</td><td>' + esc(f.span || '') + '</td></tr>';
+        });
+        fHtml += '</tbody></table>';
+        body += nestedExpandableCard(uid + '-form', 'Form Fields (' + res.form.fields.length + ')', fHtml, false);
+      }
+
+      // Table Columns
+      if (res.table && res.table.columns && res.table.columns.length > 0) {
+        var cHtml = '<table class="data-table"><thead><tr><th>Name</th><th>Type</th><th>Sortable</th><th>Searchable</th></tr></thead><tbody>';
+        res.table.columns.forEach(function(c) {
+          cHtml += '<tr><td>' + esc(c.name || '') + '</td><td>' + badgeHtml(c.type || '', 'badge-info') + '</td><td>' + checkMark(c.sortable) + '</td><td>' + checkMark(c.searchable) + '</td></tr>';
+        });
+        cHtml += '</tbody></table>';
+        if (res.table.defaultSort) {
+          cHtml += '<div style="margin-top:8px;font-size:0.82rem;color:var(--muted);">Default Sort: ' + esc(res.table.defaultSort.column) + ' ' + esc(res.table.defaultSort.direction || 'asc') + '</div>';
+        }
+        body += nestedExpandableCard(uid + '-cols', 'Table Columns (' + res.table.columns.length + ')', cHtml, false);
+      }
+
+      // Filters
+      if (res.filters) {
+        var flHtml = '';
+        if (res.filters.length > 0) {
+          flHtml = '<ul style="padding-left:16px;font-size:0.85rem;">';
+          res.filters.forEach(function(f) {
+            flHtml += '<li>' + esc(typeof f === 'string' ? f : (f.name || f.type || JSON.stringify(f))) + '</li>';
+          });
+          flHtml += '</ul>';
+        } else {
+          flHtml = '<div class="empty-state" style="padding:12px;">None configured</div>';
+        }
+        body += nestedExpandableCard(uid + '-filters', 'Filters', flHtml, false);
+      }
+
+      // Search
+      if (res.search) {
+        var sHtml = '<div style="font-size:0.85rem;">';
+        if (res.search.columns && res.search.columns.length > 0)
+          sHtml += '<strong>Columns:</strong> ' + res.search.columns.map(function(c) { return '<code>' + esc(c) + '</code>'; }).join(', ');
+        if (res.search.method) sHtml += '<br><strong>Method:</strong> <code>' + esc(res.search.method) + '</code>';
+        sHtml += '</div>';
+        body += nestedExpandableCard(uid + '-search', 'Search', sHtml, false);
+      }
+
+      // Actions
+      if (res.actions) {
+        var aHtml = '';
+        ['headerActions', 'tableActions', 'bulkActions'].forEach(function(key) {
+          var acts = res.actions[key];
+          if (!acts || acts.length === 0) return;
+          aHtml += '<div style="margin-bottom:8px;"><strong style="font-size:0.82rem;">' + esc(key) + ':</strong><ul style="padding-left:16px;font-size:0.85rem;">';
+          acts.forEach(function(a) {
+            var label = typeof a === 'string' ? a : (a.name || a.label || JSON.stringify(a));
+            aHtml += '<li>' + esc(label);
+            if (typeof a === 'object' && a.mechanics) aHtml += ' <span style="color:var(--muted);">(' + esc(a.mechanics) + ')</span>';
+            aHtml += '</li>';
+          });
+          aHtml += '</ul></div>';
+        });
+        if (!aHtml) aHtml = '<div class="empty-state" style="padding:12px;">No actions</div>';
+        body += nestedExpandableCard(uid + '-actions', 'Actions', aHtml, false);
+      }
+
+      // Eager Loading
+      if (res.eagerLoading) {
+        var eHtml = '<div style="font-size:0.85rem;">';
+        ['list', 'view', 'form'].forEach(function(scope) {
+          var rels = res.eagerLoading[scope];
+          if (!rels || rels.length === 0) return;
+          eHtml += '<strong>' + esc(scope) + ':</strong> ' + rels.map(function(r) { return '<code>' + esc(r) + '</code>'; }).join(', ') + '<br>';
+        });
+        eHtml += '</div>';
+        body += nestedExpandableCard(uid + '-eager', 'Eager Loading', eHtml, false);
+      }
+
+      // Embedded In
+      if (res.embeddedIn && res.embeddedIn.length > 0) {
+        var emHtml = '<div class="deps-list">';
+        res.embeddedIn.forEach(function(e) { emHtml += badgeHtml(e, 'badge-teal'); });
+        emHtml += '</div>';
+        body += nestedExpandableCard(uid + '-embedded', 'Embedded In', emHtml, false);
+      }
+
+      html += expandableCard(uid, esc(res.name || 'Resource'), body, badgeHtml(res.model || '', 'badge-info'), ri === 0);
+    });
+    panel.innerHTML = html;
+  }
+
+  /* ===================================================================
+   * TAB 9 : OBSERVERS
+   * =================================================================*/
+  function renderObservers(panel) {
+    var observers = AUDIT_DATA.observers || [];
+    if (observers.length === 0) { panel.innerHTML = '<div class="empty-state">No observer data available</div>'; return; }
+    var html = '<table class="data-table"><thead><tr><th>Observer</th><th>Attached To</th><th>Events</th></tr></thead><tbody>';
+    observers.forEach(function(o) {
+      var events = o.events || {};
+      var eventHtml = '';
+      Object.keys(events).forEach(function(ev) {
+        eventHtml += '<div style="margin-bottom:4px;">' + badgeHtml(ev, 'badge-purple') + ' <span style="font-size:0.82rem;">' + esc(events[ev]) + '</span></div>';
+      });
+      html += '<tr><td><strong>' + esc(o.name) + '</strong></td>' +
+        '<td>' + (o.attachedTo || []).map(function(m) { return badgeHtml(m, 'badge-info'); }).join(' ') + '</td>' +
+        '<td>' + eventHtml + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    panel.innerHTML = html;
+  }
+
+  /* ===================================================================
+   * TAB 10 : JOBS  (expandable cards + import pipelines)
+   * =================================================================*/
+  function renderJobs(panel) {
+    var jobs = AUDIT_DATA.jobs || [];
+    var imports = AUDIT_DATA.imports || [];
+    if (jobs.length === 0 && imports.length === 0) { panel.innerHTML = '<div class="empty-state">No job or import data available</div>'; return; }
+    var html = '';
+
+    if (jobs.length > 0) {
+      html += '<h3 style="font-size:0.95rem;margin-bottom:12px;">Jobs</h3>';
+      jobs.forEach(function(job, i) {
+        var body = '<div style="font-size:0.85rem;display:grid;grid-template-columns:120px 1fr;gap:6px 12px;">';
+        if (job.queue) body += '<strong>Queue:</strong><span>' + esc(job.queue) + '</span>';
+        if (job.triggeredBy) body += '<strong>Triggered By:</strong><span>' + esc(job.triggeredBy) + '</span>';
+        if (job.query) body += '<strong>Query:</strong><code>' + esc(typeof job.query === 'string' ? job.query : JSON.stringify(job.query)) + '</code>';
+        if (job.output) body += '<strong>Output:</strong><span>' + esc(typeof job.output === 'string' ? job.output : JSON.stringify(job.output)) + '</span>';
+        if (job.notification) body += '<strong>Notification:</strong><span>' + esc(typeof job.notification === 'string' ? job.notification : JSON.stringify(job.notification)) + '</span>';
+        if (job.filters) body += '<strong>Filters:</strong><span>' + esc(typeof job.filters === 'string' ? job.filters : JSON.stringify(job.filters)) + '</span>';
+        body += '</div>';
+        html += expandableCard('job-' + i, esc(job.name || 'Job'), body, badgeHtml(job.type || 'job', 'badge-info'), false);
+      });
+    }
+
+    if (imports.length > 0) {
+      html += '<h3 style="font-size:0.95rem;margin:20px 0 12px 0;">Import Pipelines</h3>';
+      imports.forEach(function(imp, i) {
+        var body = '<div style="font-size:0.85rem;display:grid;grid-template-columns:150px 1fr;gap:6px 12px;">';
+        if (imp.templateGenerator) body += '<strong>Template Gen:</strong><code>' + esc(imp.templateGenerator) + '</code>';
+        if (imp.validator) body += '<strong>Validator:</strong><code>' + esc(imp.validator) + '</code>';
+        if (imp.processor) body += '<strong>Processor:</strong><code>' + esc(imp.processor) + '</code>';
+        body += '</div>';
+        if (imp.flow && imp.flow.length > 0) {
+          body += '<div style="margin-top:8px;"><strong style="font-size:0.82rem;">Flow:</strong><ol style="padding-left:20px;font-size:0.82rem;">';
+          imp.flow.forEach(function(step) { body += '<li>' + esc(step) + '</li>'; });
+          body += '</ol></div>';
+        }
+        html += expandableCard('import-' + i, esc(imp.name || 'Import'), body, badgeHtml('import', 'badge-teal'), false);
+      });
+    }
+
+    panel.innerHTML = html;
+  }
+
+  /* ===================================================================
+   * TAB 11 : POLICIES
+   * =================================================================*/
+  function renderPolicies(panel) {
+    var policies = AUDIT_DATA.policies || [];
+    if (policies.length === 0) { panel.innerHTML = '<div class="empty-state">No policy data available</div>'; return; }
+    var html = '';
+    policies.forEach(function(pol, i) {
+      var body = '';
+      if (pol.permissions && pol.permissions.length > 0) {
+        body += '<table class="data-table"><thead><tr><th>Method</th><th>Permission Gate</th></tr></thead><tbody>';
+        pol.permissions.forEach(function(p) {
+          body += '<tr><td><code>' + esc(p.method) + '</code></td><td><code>' + esc(p.gate || '') + '</code></td></tr>';
+        });
+        body += '</tbody></table>';
+      } else {
+        body = '<div class="empty-state" style="padding:12px;">No permissions defined</div>';
+      }
+      html += expandableCard('pol-' + i, esc(pol.name || 'Policy'), body, badgeHtml(pol.model || '', 'badge-info'), false);
+    });
+    panel.innerHTML = html;
+  }
+
+  /* ===================================================================
+   * MERMAID ASYNC RENDERER
+   * =================================================================*/
+  async function renderMermaidInto(containerId, code) {
+    var el = document.getElementById(containerId);
+    if (!el) return;
+    if (window.mermaidRender) {
+      var svg = await window.mermaidRender(containerId, code);
+      el.innerHTML = svg;
+    } else {
+      var pre = document.createElement('pre');
+      pre.textContent = code;
+      el.innerHTML = '';
+      el.appendChild(pre);
+    }
+  }
+
+  /* ===================================================================
+   * TAB RENDERING ENGINE
+   * =================================================================*/
+  var renderers = {
+    'summary': renderSummary,
+    'er-diagram': renderErDiagram,
+    'relationships': renderRelationships,
+    'lineage': renderLineage,
+    'field-map': renderFieldMap,
+    'data-flow': renderDataFlow,
+    'enums': renderEnums,
+    'resources': renderResources,
+    'observers': renderObservers,
+    'jobs': renderJobs,
+    'policies': renderPolicies
+  };
+
+  async function renderTab(tabId) {
+    var panel = document.getElementById('panel-' + tabId);
+    if (!panel) return;
+    var renderer = renderers[tabId];
+    if (!renderer) { panel.innerHTML = '<div class="empty-state">Unknown tab</div>'; return; }
+    var result = renderer(panel);
+    if (result instanceof Promise) await result;
+  }
+
+  /* ===================================================================
+   * BUILD UI
+   * =================================================================*/
+  function buildTabs() {
+    var bar = document.getElementById('tabBar');
+    var panels = document.getElementById('tabPanels');
+    var barHtml = '';
+    var panelsHtml = '';
+    TABS.forEach(function(t) {
+      barHtml += '<button data-tab="' + t.id + '" class="' + (t.id === activeTab ? 'active' : '') + '">' + t.label + '</button>';
+      panelsHtml += '<div class="tab-panel' + (t.id === activeTab ? ' active' : '') + '" id="panel-' + t.id + '" data-tab-title="' + esc(t.label) + '"></div>';
+    });
+    bar.innerHTML = barHtml;
+    panels.innerHTML = panelsHtml;
+  }
+
+  async function switchTab(tabId) {
+    activeTab = tabId;
+    var buttons = document.querySelectorAll('.tab-bar button');
+    for (var i = 0; i < buttons.length; i++)
+      buttons[i].classList.toggle('active', buttons[i].getAttribute('data-tab') === tabId);
+    var pnls = document.querySelectorAll('.tab-panel');
+    for (var j = 0; j < pnls.length; j++)
+      pnls[j].classList.toggle('active', pnls[j].id === 'panel-' + tabId);
+    await renderTab(tabId);
+  }
+
+  /* ===================================================================
+   * EVENT DELEGATION  (single listeners, no inline handlers)
+   * =================================================================*/
+  function setupEventListeners() {
+    // Tab bar clicks
+    document.getElementById('tabBar').addEventListener('click', function(e) {
+      var btn = e.target.closest('button[data-tab]');
+      if (btn) switchTab(btn.getAttribute('data-tab'));
+    });
+
+    // Search
+    document.getElementById('globalSearch').addEventListener('input', function(e) {
+      searchQuery = e.target.value;
+      renderTab(activeTab);
+    });
+
+    // Locale toggle
+    document.getElementById('localeBtn').addEventListener('click', function() {
+      currentLocale = currentLocale === 'en' ? 'ar' : 'en';
+      this.textContent = currentLocale === 'en' ? 'AR/EN' : 'EN/AR';
+      this.classList.toggle('active', currentLocale === 'ar');
+      if (activeTab === 'lineage') renderTab('lineage');
+    });
+
+    // Theme toggle
+    document.getElementById('themeBtn').addEventListener('click', function() {
+      var html = document.documentElement;
+      var isDark = html.getAttribute('data-theme') === 'dark';
+      html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      if (window.mermaidReInit) window.mermaidReInit(!isDark);
+      renderTab(activeTab);
+    });
+
+    // Print
+    document.getElementById('printBtn').addEventListener('click', function() {
+      window.print();
+    });
+
+    // Export JSON
+    document.getElementById('exportBtn').addEventListener('click', function() {
+      var blob = new Blob([JSON.stringify(AUDIT_DATA, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      var modules = (AUDIT_DATA.meta && AUDIT_DATA.meta.modules) ? AUDIT_DATA.meta.modules.join('-') : 'audit';
+      a.download = modules + '-audit-data.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // Modal close
+    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+    document.getElementById('modal').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // Delegated clicks on body for cards, tables, lineage, ER
+    document.addEventListener('click', function(e) {
+      // Card toggle
+      var toggleHeader = e.target.closest('[data-toggle]');
+      if (toggleHeader) {
+        var toggleId = toggleHeader.getAttribute('data-toggle');
+        toggleCard(toggleId);
+        return;
+      }
+
+      // Sortable table header
+      var th = e.target.closest('th[data-table-id]');
+      if (th) {
+        var tableId = th.getAttribute('data-table-id');
+        var colIdx = parseInt(th.getAttribute('data-col'));
+        if (!isNaN(colIdx)) {
+          var state = sortStates[tableId] || { col: null, dir: 'asc' };
+          if (state.col === colIdx) { state.dir = state.dir === 'asc' ? 'desc' : 'asc'; }
+          else { state.col = colIdx; state.dir = 'asc'; }
+          sortStates[tableId] = state;
+          renderTab(activeTab);
+        }
+        return;
+      }
+
+      // ER table header click for sample data
+      var sampleBtn = e.target.closest('[data-sample-table]');
+      if (sampleBtn) {
+        e.stopPropagation();
+        showTableSample(sampleBtn.getAttribute('data-sample-table'));
+        return;
+      }
+
+      // Lineage row click for chain visual
+      var lineageRow = e.target.closest('.lineage-row');
+      if (lineageRow) {
+        var idx = parseInt(lineageRow.getAttribute('data-idx'));
+        if (!isNaN(idx)) showChainVisual(idx);
+        return;
+      }
+
+      // Lineage view toggles
+      var viewBtn = e.target.closest('[data-lineage-view]');
+      if (viewBtn) {
+        setLineageView(viewBtn.getAttribute('data-lineage-view'));
+        return;
+      }
+    });
+
+    // ER card drag via mousedown delegation
+    document.addEventListener('mousedown', function(e) {
+      var card = e.target.closest('.er-table-card');
+      if (!card) return;
+      if (e.target.closest('.er-table-header')) return;
+      var tableName = card.getAttribute('data-table');
+      if (!tableName) return;
+      e.preventDefault();
+      erDrag = {
+        card: card,
+        startX: e.clientX,
+        startY: e.clientY,
+        origLeft: parseInt(card.style.left),
+        origTop: parseInt(card.style.top)
+      };
+      document.addEventListener('mousemove', erDragMove);
+      document.addEventListener('mouseup', erDragEnd);
+    });
+
+    // Lineage resource filter
+    document.addEventListener('change', function(e) {
+      if (e.target.id === 'lineageResourceFilter') filterLineageRows();
+    });
+  }
+
+  /* ===================================================================
+   * CARD TOGGLE
+   * =================================================================*/
+  function toggleCard(id) {
+    var body = document.getElementById('body-' + id);
+    if (!body) return;
+    body.classList.toggle('collapsed');
+    var header = body.previousElementSibling;
+    if (header) {
+      var icon = header.querySelector('.toggle-icon');
+      if (icon) icon.classList.toggle('open');
+    }
+  }
+
+  /* ===================================================================
+   * MODAL
+   * =================================================================*/
+  function openModal(title, bodyHtml) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalBody').innerHTML = bodyHtml;
+    document.getElementById('modal').classList.add('open');
+  }
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+  }
+
+  /* ===================================================================
+   * ER SAMPLE DATA MODAL
+   * =================================================================*/
+  function showTableSample(tableName) {
+    var tables = AUDIT_DATA.tables || [];
+    var t = null;
+    for (var i = 0; i < tables.length; i++) { if (tables[i].name === tableName) { t = tables[i]; break; } }
+    if (!t) return;
+    var html = '';
+    if (t.sampleData && t.sampleData.length > 0) {
+      var cols = Object.keys(t.sampleData[0]);
+      html += '<table class="data-table"><thead><tr>';
+      cols.forEach(function(c) { html += '<th>' + esc(c) + '</th>'; });
+      html += '</tr></thead><tbody>';
+      t.sampleData.forEach(function(row) {
+        html += '<tr>';
+        cols.forEach(function(c) { html += '<td>' + esc(row[c]) + '</td>'; });
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+    } else {
+      html = '<div class="empty-state">No sample data available</div>';
+    }
+    openModal(tableName + ' - Sample Data', html);
+  }
+
+  /* ===================================================================
+   * INIT
+   * =================================================================*/
+  function init() {
+    buildTabs();
+    setupEventListeners();
+    if (window.mermaidReady) {
+      renderTab(activeTab);
+    } else {
+      window.onMermaidReady = function() { renderTab(activeTab); };
+      setTimeout(function() { renderTab(activeTab); }, 2000);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
 </script>
 </body>
 </html>
