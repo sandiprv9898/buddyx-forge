@@ -6,15 +6,15 @@
   "plugins": [
     {
       "name": "buddyx-forge",
-      "description": "Generate a complete multi-agent development system for Laravel projects",
-      "version": "1.0.0",
+      "description": "Generate a complete multi-agent development system for any project. Supports Laravel, Next.js, React, Node.js, Django, Go, and Rails.",
+      "version": "1.1.0",
       "source": "./plugins/buddyx-forge",
       "author": {
         "name": "Sandip Vanodiya"
       },
       "license": "MIT",
       "category": "development",
-      "tags": ["agents", "laravel", "filament", "multi-agent", "scaffolding"]
+      "tags": ["agents", "multi-agent", "scaffolding", "laravel", "nextjs", "react", "django", "go", "rails", "nodejs"]
     }
   ]
 }

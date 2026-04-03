@@ -23,18 +23,48 @@ Read any agent file in `.claude/agents/` and extract the name prefix from frontm
 
 ### Step 2: Scan Codebase
 
+Detect the framework from CLAUDE.md or settings.json, then scan framework-appropriate directories:
+
+**Laravel/PHP:**
 ```bash
-find app/Models -name "*.php" -type f | sort
-find app/Filament/Resources -maxdepth 1 -name "*Resource.php" -type f 2>/dev/null | sort
+find app/Models -name "*.php" -type f 2>/dev/null | sort
 find app/Filament/Resources -name "*.php" -type f 2>/dev/null | sort
 find app/Http/Controllers -name "*.php" -type f 2>/dev/null | sort
-find app/Jobs -name "*.php" -type f 2>/dev/null | sort
-find app/Exports app/Imports -name "*.php" -type f 2>/dev/null | sort
-find app/Policies -name "*.php" -type f 2>/dev/null | sort
-find app/Services -name "*.php" -type f 2>/dev/null | sort
-find app/Helpers -name "*.php" -type f 2>/dev/null | sort
-find app/Enum app/Enums -name "*.php" -type f 2>/dev/null | sort
-find app/Observers -name "*.php" -type f 2>/dev/null | sort
+find app/Jobs app/Exports app/Imports -name "*.php" -type f 2>/dev/null | sort
+find app/Policies app/Services app/Helpers -name "*.php" -type f 2>/dev/null | sort
+find app/Enum app/Enums app/Observers -name "*.php" -type f 2>/dev/null | sort
+```
+
+**Next.js/React/Node.js (TypeScript/JavaScript):**
+```bash
+find src/app -name "*.tsx" -o -name "*.ts" -type f 2>/dev/null | sort
+find src/components -name "*.tsx" -type f 2>/dev/null | sort
+find src/hooks src/lib src/services -name "*.ts" -type f 2>/dev/null | sort
+find src/api app/api -name "*.ts" -type f 2>/dev/null | sort
+find prisma -name "*.prisma" -type f 2>/dev/null | sort
+```
+
+**Django (Python):**
+```bash
+find . -path "*/models.py" -type f 2>/dev/null | sort
+find . -path "*/views.py" -type f 2>/dev/null | sort
+find . -path "*/serializers.py" -type f 2>/dev/null | sort
+find . -path "*/urls.py" -path "*/tasks.py" -path "*/admin.py" -type f 2>/dev/null | sort
+find . -path "*/tests/*.py" -type f 2>/dev/null | sort
+```
+
+**Go:**
+```bash
+find internal cmd pkg -name "*.go" -type f 2>/dev/null | sort
+find . -name "*_test.go" -type f 2>/dev/null | sort
+```
+
+**Rails (Ruby):**
+```bash
+find app/models -name "*.rb" -type f 2>/dev/null | sort
+find app/controllers -name "*.rb" -type f 2>/dev/null | sort
+find app/services app/jobs app/mailers -name "*.rb" -type f 2>/dev/null | sort
+find app/serializers app/policies -name "*.rb" -type f 2>/dev/null | sort
 ```
 
 ### Step 3: Group Files by Domain

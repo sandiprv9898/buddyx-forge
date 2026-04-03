@@ -1,7 +1,7 @@
 {
   "name": "buddyx-forge",
-  "description": "Generate a complete multi-agent development system for Laravel projects",
-  "version": "1.0.0",
+  "description": "Generate a complete multi-agent development system for any project. Supports Laravel, Next.js, React, Node.js, Django, Go, and Rails.",
+  "version": "1.1.0",
   "author": {
     "name": "Sandip Vanodiya"
   },

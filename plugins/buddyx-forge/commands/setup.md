@@ -177,4 +177,24 @@ Next steps:
   3. Start using your agents!
 ```
 
+## Step 6: Recommend Plugins & MCP Servers
+
+Read `references/tech-recommendations.md` for the full list. Based on the detected framework, suggest relevant tools:
+
+Present to user:
+```
+Recommended for your {framework} project:
+
+Must Have:
+  {list must-have plugins with install commands}
+
+Recommended:
+  {list recommended plugins}
+
+Install all must-haves with:
+  {one command per plugin}
+```
+
+Only suggest — don't auto-install. User decides what to install.
+
 **Do NOT use Write tool to create any .claude/ files. The generator handles everything.**

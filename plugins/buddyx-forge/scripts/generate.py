@@ -115,6 +115,36 @@ def build_settings_json(config: dict) -> str:
     allow = ["WebSearch"]
     ask = []
 
+    # Framework-aware permission commands
+    framework = config.get("techStack", {}).get("framework", "laravel").lower()
+    fw_commands = {
+        "laravel": {
+            "allow": ["Bash(php -l *)", "Bash(php artisan *)", "Bash(composer show *)", "Bash(composer dump-autoload *)"],
+            "ask": ["Bash(composer update *)", "Bash(composer require *)"],
+        },
+        "django": {
+            "allow": ["Bash(python3 *)", "Bash(pip show *)", "Bash(python manage.py *)"],
+            "ask": ["Bash(pip install *)", "Bash(pip uninstall *)"],
+        },
+        "go": {
+            "allow": ["Bash(go build *)", "Bash(go test *)", "Bash(go vet *)", "Bash(go run *)"],
+            "ask": ["Bash(go install *)", "Bash(go get *)"],
+        },
+        "rails": {
+            "allow": ["Bash(ruby *)", "Bash(bundle exec *)", "Bash(rails *)"],
+            "ask": ["Bash(bundle install *)", "Bash(bundle update *)", "Bash(gem install *)"],
+        },
+    }
+    # Next.js, React, Node.js, Express, Fastify, NestJS — all JS/TS
+    js_commands = {
+        "allow": ["Bash(npx *)", "Bash(node *)", "Bash(tsx *)"],
+        "ask": ["Bash(npm install *)", "Bash(npm uninstall *)", "Bash(yarn add *)"],
+    }
+    for js_fw in ("nextjs", "next.js", "react", "nodejs", "node", "express", "fastify", "nestjs", "hono"):
+        fw_commands[js_fw] = js_commands
+
+    fw = fw_commands.get(framework, {"allow": [], "ask": []})
+
     if perm_level == "conservative":
         if formatter:
             allow.append(f"Bash({formatter} *)")
@@ -123,24 +153,22 @@ def build_settings_json(config: dict) -> str:
         if formatter:
             allow.append(f"Bash({formatter} *)")
         allow.extend([
-            "Bash(php -l *)", "Bash(php artisan *)",
-            "Bash(composer show *)", "Bash(composer dump-autoload *)",
             "Bash(wc *)", "Bash(ls *)", "Bash(find *)",
             "Bash(sort *)", "Bash(diff *)", "Bash(python3 *)",
         ])
-        ask.extend([
-            "Bash(git *)", "Bash(rm *)", "Bash(chmod *)",
-            "Bash(composer update *)", "Bash(composer require *)",
-        ])
+        allow.extend(fw.get("allow", []))
+        ask.extend(["Bash(git *)", "Bash(rm *)", "Bash(chmod *)"])
+        ask.extend(fw.get("ask", []))
     elif perm_level == "permissive":
         if formatter:
             allow.append(f"Bash({formatter} *)")
         allow.extend([
-            "Bash(php *)", "Bash(composer *)",
             "Bash(wc *)", "Bash(ls *)", "Bash(find *)",
             "Bash(sort *)", "Bash(diff *)", "Bash(python3 *)",
-            "Bash(npm *)", "Bash(xdg-open *)",
+            "Bash(xdg-open *)",
         ])
+        allow.extend(fw.get("allow", []))
+        allow.extend(fw.get("ask", []))
         ask.extend(["Bash(git *)", "Bash(rm *)", "Bash(chmod *)"])
 
     # Add MCP permissions
