@@ -116,7 +116,7 @@ One agent per module/domain you specify. Each owns specific files and follows pr
 
 ## Skills Generated
 
-### Module Audit (862 lines)
+### Module Audit (703 lines)
 Deep 11-section analysis of any domain module:
 - DB Tables, Relationships, Data Lineage, Field Map
 - Data Flow, Enums, Resources, Observers, Jobs, Policies
@@ -201,7 +201,7 @@ Generated Output (50-80 files per project)
 ├── RULES.md — framework-specific coding rules
 ├── Agents — domain + infrastructure + optional
 ├── Scripts — safety hooks + eval hooks
-├── Skills — orchestrator, audit (862 lines), diagram (955 lines)
+├── Skills — orchestrator, audit (703 lines), diagram (955 lines)
 └── Memory — shared learnings + per-agent memory
 ```
 
@@ -227,7 +227,7 @@ buddyx-forge generated for 'school':
 - Added .gitignore, removed .pyc files
 - Fixed plugin.json description (all frameworks, not just Laravel)
 - Added tech-stack plugin recommendations (67 plugins/MCP across 12 categories)
-- Ported full audit skill (862 lines) and diagram skill (955 lines) from battle-tested HR project
+- Ported full audit skill (703 lines) and diagram skill (955 lines) from battle-tested HR project
 - Option B: generator creates ALL files (no AI dependency)
 - Renamed /init to /setup to avoid conflict with built-in /init
 
