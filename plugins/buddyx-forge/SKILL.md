@@ -12,7 +12,8 @@ Multi-agent development system generator for any project.
 
 | Command | Description |
 |---------|-------------|
-| `/buddyx-forge:setup` | **Start here** — Initialize new setup. Asks 10 questions, generates all files. |
+| `/buddyx-forge:quick` | **Fastest** — Zero questions, auto-detects everything, uses smart defaults. |
+| `/buddyx-forge:setup` | **Full control** — 10 questions for complete customization. |
 | `/buddyx-forge:scan` | Re-scan codebase, update domain-map and context packs. |
 | `/buddyx-forge:health` | Validate setup integrity, score 0-100. |
 | `/buddyx-forge:add-domain` | Add a new domain agent to existing setup. |
@@ -21,6 +22,6 @@ Multi-agent development system generator for any project.
 
 ## Quick Start
 
-1. Run `/buddyx-forge:setup` to set up
+1. Run `/buddyx-forge:quick` for instant setup (or `/buddyx-forge:setup` for full customization)
 2. Run `/buddyx-forge:scan` to populate file lists
 3. Run `/buddyx-forge:health` to verify (target: 100/100)

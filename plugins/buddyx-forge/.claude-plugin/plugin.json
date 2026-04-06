@@ -7,7 +7,8 @@
   },
   "license": "MIT",
   "commands": [
-    {"name": "setup", "description": "Set up multi-agent development system", "file": "commands/setup.md"},
+    {"name": "quick", "description": "Zero-question auto-setup with smart defaults", "file": "commands/quick.md"},
+    {"name": "setup", "description": "Full 10-question setup with customization", "file": "commands/setup.md"},
     {"name": "scan", "description": "Re-scan codebase and update domain-map", "file": "commands/scan.md"},
     {"name": "health", "description": "Validate setup integrity (0-100 score)", "file": "commands/health.md"},
     {"name": "add-domain", "description": "Add a new domain agent", "file": "commands/add-domain.md"},
