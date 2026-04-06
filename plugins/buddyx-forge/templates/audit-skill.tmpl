@@ -26,19 +26,7 @@ Extract from the user's `/audit` command:
 
 ### Available Modules
 
-| Module | Description |
-|--------|-------------|
-| `leave` | Employee leave management |
-| `career` | Career progression (promotions, positions, academic rank) |
-| `payroll` | Salary, deductions, allowances |
-| `card` | Employee card printing |
-| `family` | Employee family members |
-| `qualifications` | Academic qualifications and certificates |
-| `personnel` | Personnel actions and documents |
-| `org-structure` | Organizational structure (units, workplaces) |
-| `core-employee` | Core employee profile and data |
-| `committee` | Committee management |
-| `export-import` | Data export and import jobs |
+{DOMAIN_LIST}
 
 ### Parsing Rules
 
@@ -57,9 +45,7 @@ If the module name does not match any entry in the available modules list, stop 
 ```
 Unknown module: "{input}"
 
-Available modules:
-  leave, career, payroll, card, family, qualifications,
-  personnel, org-structure, core-employee, committee, export-import
+Available modules: see the table above.
 
 Usage: /audit <module> [html] [fresh]
 ```
@@ -97,15 +83,10 @@ Replace the glob entry with the resolved list of actual file paths.
 
 If the module name is NOT found in the domain map (no `## {module}` header exists), fall back to keyword scanning:
 
-1. Scan these directories for files matching `*{keyword}*`:
-   - `app/Models/*{keyword}*.php`
-   - `app/Filament/Resources/*{keyword}*.php`
-   - `app/Jobs/*{keyword}*.php`
-   - `app/Policies/*{keyword}*.php`
-   - `app/Services/*{keyword}*.php`
-   - `app/Exports/*{keyword}*.php`
-   - `app/Imports/*{keyword}*.php`
-   - `app/Enum/*{keyword}*.php`
+1. Scan the project's source directories for files matching `*{keyword}*` using Glob:
+   ```
+   Glob pattern: "{SOURCE_DIR_FILTER}**/*{keyword}*"
+   ```
 2. Add a warning to the output: `"WARNING: Module '{module}' not found in domain-map.md. Using keyword fallback — results may be incomplete."`
 
 ### 2e: Multi-Module Merge
@@ -119,24 +100,7 @@ When multiple modules are requested (e.g., `/audit leave + payroll`):
 
 ### 2f: File List Summary
 
-After resolution, organize files into categories for later steps:
-
-| Category | File pattern | Example |
-|----------|-------------|---------|
-| Models | `app/Models/*.php` | `HR_EmployeeLeaves.php` |
-| Resources | `app/Filament/Resources/*Resource.php` | `EmployeeLeavesResource.php` |
-| Resource Pages | `app/Filament/Resources/*/Pages/*.php` | `ListEmployeeLeaves.php` |
-| Employer Pages | `app/Filament/Resources/EmployerResource/Pages/*.php` | `EmployeeLeaves.php` |
-| Jobs | `app/Jobs/*.php` | `ExportEmployeeLeavesExcelJob.php` |
-| Policies | `app/Policies/*.php` | `EmployeeLeavesPolicy.php` |
-| Exports | `app/Exports/*.php` | `EmployeeLeavesExport.php` |
-| Imports | `app/Imports/*.php` | `ValidateLeaveCreditImport.php` |
-| Services | `app/Services/**/*.php` | `OptimizedLeaveService.php` |
-| Helpers | `app/Helpers/*.php` | `LeavesHelper.php` |
-| Enums | `app/Enum/*.php` | `LeaveStatus.php` |
-| Observers | `app/Observers/*.php` | `HR_EmployeeLeavesObserver.php` |
-| Traits | `app/Traits/*.php` | `HasLeaveCalculations.php` |
-| Views | `resources/views/**/*.php` | `leave_pdf_block.blade.php` |
+After resolution, organize files into categories based on the project's structure (models, controllers/resources, services, jobs, tests, configs, etc.). Use the domain map's file groupings as a guide.
 
 Store this categorized list — all subsequent steps reference it.
 
@@ -146,21 +110,17 @@ Store this categorized list — all subsequent steps reference it.
 
 Extract structured model and schema data using the project's context extraction script.
 
-### 3a: Execute the Script
+### 3a: Read the Context Pack
 
-Run from the project root:
-
-```bash
-php .claude/scripts/extract-agent-context.php --domain={module}
-```
-
-### 3b: Read the Output
-
-Read the generated context file:
+Read the domain's context pack at:
 
 ```
 .claude/skills/{PROJECT_NAME}/context/agent-context/{module}-context.md
 ```
+
+If the file does not exist or is empty, proceed to Step 3d (fallback).
+
+### 3b: Parse the Context
 
 The file is structured Markdown containing:
 
@@ -193,19 +153,15 @@ If the script fails (non-zero exit code or missing output file):
 
 ---
 
-## Step 4: Get DB Schema via Laravel Boost MCP
+## Step 4: Get DB Schema
 
 Enrich the data with live database schema information.
 
 ### 4a: Schema for Each Table
 
-For each model identified in Step 3, get its table schema:
+{DB_TOOLS}
 
-```
-mcp__laravel-boost__database-schema(filter: "{table_name}", include_column_details: true)
-```
-
-Extract from the result:
+For each model/entity identified in Step 3, get its table schema. Extract:
 - Column names and data types
 - Nullable flags
 - Default values
@@ -214,26 +170,19 @@ Extract from the result:
 
 ### 4b: Sample Data
 
-For each table, fetch a few sample rows to understand real data patterns:
-
-```
-mcp__laravel-boost__database-query(query: "SELECT * FROM \"{TableName}\" WHERE \"DeletionTime\" IS NULL LIMIT 3")
-```
-
-This helps identify:
+Query each table for a few sample rows to understand real data patterns:
 - Which columns are actually populated vs always null
 - Enum value patterns
 - FK reference patterns
 
-### 4c: Fallback if MCP Unavailable
+### 4c: Fallback if DB Tools Unavailable
 
-If MCP calls fail or time out:
+If database tools fail or are unavailable:
 
-1. Add a warning: `"WARNING: Laravel Boost MCP unavailable. Using model metadata only — schema details may be incomplete."`
-2. Use model `$fillable` arrays for column names
-3. Use model `$casts` for type information
-4. Use relationship methods for FK inference
-5. Continue to Step 5 — do NOT stop the audit
+1. Add a warning: `"WARNING: Database tools unavailable. Using code metadata only — schema details may be incomplete."`
+2. Use model/entity definitions for column names and types
+3. Use relationship definitions for FK inference
+4. Continue to Step 5 — do NOT stop the audit
 
 ---
 

@@ -42,8 +42,18 @@ tr:hover td{background:rgba(56,189,248,.05)}
 <h2>Recent Activity</h2>
 <div class="timeline" id="timeline"></div>
 </div>
+<script type="application/json" id="events-json">[]</script>
 <script>
-const EVENTS_DATA = [];
+let EVENTS_DATA = [];
+function loadEvents() {
+  try {
+    var el = document.getElementById('events-json');
+    if (el && el.textContent.trim()) {
+      EVENTS_DATA = JSON.parse(el.textContent);
+    }
+  } catch(e) { console.warn('Failed to parse events data:', e); }
+  render();
+}
 function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
 function formatDuration(s){if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m '+s%60+'s';return Math.floor(s/3600)+'h '+Math.floor((s%3600)/60)+'m'}
 function formatTime(t){try{return new Date(t).toLocaleString()}catch(e){return t}}
@@ -84,7 +94,7 @@ function render(){
       '</div>'
   }).join('');
 }
-document.addEventListener('DOMContentLoaded',render);
+document.addEventListener('DOMContentLoaded', loadEvents);
 </script>
 </body>
 </html>

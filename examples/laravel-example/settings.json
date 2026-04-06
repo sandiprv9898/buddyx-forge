@@ -1,0 +1,147 @@
+{
+    "permissions": {
+        "allow": [
+            "WebSearch",
+            "Bash(vendor/bin/pint *)",
+            "Bash(wc *)",
+            "Bash(ls *)",
+            "Bash(find *)",
+            "Bash(sort *)",
+            "Bash(diff *)",
+            "Bash(python3 *)",
+            "Bash(php -l *)",
+            "Bash(php artisan *)",
+            "Bash(composer show *)",
+            "Bash(composer dump-autoload *)"
+        ],
+        "ask": [
+            "Bash(git *)",
+            "Bash(rm *)",
+            "Bash(chmod *)",
+            "Bash(composer update *)",
+            "Bash(composer require *)"
+        ],
+        "deny": []
+    },
+    "hooks": {
+        "UserPromptSubmit": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": ".claude/scripts/inject-prompt-context.sh"
+                    }
+                ]
+            }
+        ],
+        "PreToolUse": [
+            {
+                "matcher": "Bash",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": ".claude/scripts/safety-guard.sh"
+                    }
+                ]
+            },
+            {
+                "matcher": "Bash",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": ".claude/scripts/block-git-commit.sh"
+                    }
+                ]
+            }
+        ],
+        "PostToolUse": [
+            {
+                "matcher": "Write",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": ".claude/scripts/auto-format-new-files.sh"
+                    }
+                ]
+            },
+            {
+                "matcher": "Write",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": ".claude/scripts/detect-new-file-created.sh"
+                    }
+                ]
+            },
+            {
+                "matcher": "Edit",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": ".claude/scripts/detect-new-file-created.sh"
+                    }
+                ]
+            }
+        ],
+        "SubagentStart": [
+            {
+                "matcher": "myapp-*",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": ".claude/scripts/eval/track-agent-start.sh"
+                    }
+                ]
+            }
+        ],
+        "SubagentStop": [
+            {
+                "matcher": "myapp-*",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": ".claude/scripts/eval/track-session-count.sh"
+                    },
+                    {
+                        "type": "command",
+                        "command": ".claude/scripts/eval/validate-agent-output.sh"
+                    },
+                    {
+                        "type": "command",
+                        "command": ".claude/scripts/eval/extract-learnings.sh"
+                    },
+                    {
+                        "type": "command",
+                        "command": ".claude/scripts/eval/prompt-save-learnings.sh"
+                    },
+                    {
+                        "type": "command",
+                        "command": ".claude/scripts/eval/auto-promote-learnings.sh"
+                    }
+                ]
+            }
+        ],
+        "PreCompact": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "echo '{\"systemMessage\": \"PRESERVE: current task goal, files changed, agent delegations in progress, any user decisions made this session.\"}'"
+                    }
+                ]
+            }
+        ]
+    },
+    "env": {
+        "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "75",
+        "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    },
+    "plansDirectory": ".claude/plans",
+    "autoMemoryEnabled": true,
+    "buddyxForgeVersion": "1.1.0",
+    "worktree": {
+        "symlinkDirectories": [
+            "vendor"
+        ]
+    }
+}

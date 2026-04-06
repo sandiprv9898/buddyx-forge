@@ -5,7 +5,7 @@ description: Set up buddyx-forge — create a complete multi-agent development s
 
 # buddyx-forge
 
-Generate a multi-agent development system for Laravel projects.
+Generate a multi-agent development system for any project (Laravel, Next.js, React, Node.js, Django, Go, Rails).
 
 ## Step 0: Prerequisites
 
@@ -24,12 +24,12 @@ If user passes `--dry-run`, add the flag to the generator call in Step 4. Show w
 
 Read `references/detect-stack.md` for detailed detection logic.
 
-Quick summary:
-1. Read `composer.json` → detect Laravel version, Filament presence
+Quick summary (Laravel example — read `references/detect-stack.md` for all 7 frameworks):
+1. Read `composer.json` / `package.json` / `go.mod` / `Gemfile` / `requirements.txt` → detect framework
 2. Read `.mcp.json` → detect MCP servers
-3. Read `.env` → detect DB type (`DB_CONNECTION`)
-4. Scan `app/` → detect directory structure, potential domains
-5. Check for existing formatter (`vendor/bin/pint`)
+3. Read `.env` or config files → detect DB type
+4. Scan source directories → detect directory structure, potential domains
+5. Check for existing formatter (pint, prettier, black, gofmt, rubocop)
 6. Build a tech profile and present to user for confirmation
 
 ## Step 2: Ask 10 Questions (ONE at a time)
@@ -106,7 +106,6 @@ Config schema (all fields required):
 ```json
 {
   "projectName": "string",
-  "projectDir": "string — absolute path",
   "techStack": {
     "language": "php",
     "framework": "laravel",
@@ -123,7 +122,6 @@ Config schema (all fields required):
     "blockDangerous": "boolean",
     "autoFormat": "boolean",
     "contextInjection": "boolean",
-    "agentTracking": "boolean",
     "blockMigration": "boolean"
   },
   "sharedDb": "string path or null",

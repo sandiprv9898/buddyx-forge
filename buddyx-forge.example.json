@@ -1,0 +1,35 @@
+{
+  "projectName": "myapp",
+  "domains": ["billing", "auth", "users"],
+  "domainKeywords": {
+    "billing": "invoice payment subscription",
+    "auth": "login token session",
+    "users": "profile account settings"
+  },
+  "techStack": {
+    "language": "php",
+    "framework": "laravel",
+    "frameworkVersion": "11",
+    "hasFilament": true,
+    "db": "postgresql",
+    "formatter": "vendor/bin/pint",
+    "testRunner": "php artisan test --filter="
+  },
+  "hooks": {
+    "blockCommits": true,
+    "blockDangerous": true,
+    "autoFormat": true,
+    "contextInjection": true,
+    "blockMigration": false
+  },
+  "sharedDb": null,
+  "commitPolicy": "user",
+  "permissionLevel": "balanced",
+  "agentMemory": true,
+  "promptTemplates": true,
+  "evalLevel": "full",
+  "modelBudget": "balanced",
+  "mcpServers": [],
+  "worktreeSymlinks": ["vendor"],
+  "agentTeams": true
+}

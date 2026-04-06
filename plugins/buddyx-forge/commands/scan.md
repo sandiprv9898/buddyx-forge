@@ -49,7 +49,7 @@ find prisma -name "*.prisma" -type f 2>/dev/null | sort
 find . -path "*/models.py" -type f 2>/dev/null | sort
 find . -path "*/views.py" -type f 2>/dev/null | sort
 find . -path "*/serializers.py" -type f 2>/dev/null | sort
-find . -path "*/urls.py" -path "*/tasks.py" -path "*/admin.py" -type f 2>/dev/null | sort
+find . \( -path "*/urls.py" -o -path "*/tasks.py" -o -path "*/admin.py" \) -type f 2>/dev/null | sort
 find . -path "*/tests/*.py" -type f 2>/dev/null | sort
 ```
 

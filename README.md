@@ -4,6 +4,14 @@ Generate a complete multi-agent development system for any project. One command,
 
 Supports **7 frameworks**: Laravel, Next.js, React, Node.js, Django, Go, Rails.
 
+## Why?
+
+Without buddyx-forge, setting up Claude Code for a real project means manually writing CLAUDE.md rules, configuring settings.json permissions, creating agent definitions, building safety hooks, and figuring out how agents should coordinate — easily 2-3 hours of setup that most people skip entirely, leaving Claude working without guardrails.
+
+**With buddyx-forge**, you answer 10 questions and get a production-ready system: domain-specialized agents that know your codebase structure, safety hooks that block destructive commands, a code review agent with framework-specific checklists, self-improving shared memory, and metrics tracking. The setup that took hours now takes 2 minutes.
+
+**See what it generates:** Browse the [examples/](examples/) directory for complete Laravel and Django output.
+
 ## Install
 
 ```
@@ -108,7 +116,7 @@ One agent per module/domain you specify. Each owns specific files and follows pr
 
 ## Skills Generated
 
-### Module Audit (955 lines)
+### Module Audit (862 lines)
 Deep 11-section analysis of any domain module:
 - DB Tables, Relationships, Data Lineage, Field Map
 - Data Flow, Enums, Resources, Observers, Jobs, Policies
@@ -120,6 +128,7 @@ audit billing html
 ```
 
 ### Diagram Generator (955 lines)
+
 Interactive HTML diagrams from codebase analysis:
 - ER diagrams (custom HTML table cards)
 - Flowcharts, Sequence, Architecture, State diagrams (Mermaid.js)
@@ -192,7 +201,7 @@ Generated Output (50-80 files per project)
 ├── RULES.md — framework-specific coding rules
 ├── Agents — domain + infrastructure + optional
 ├── Scripts — safety hooks + eval hooks
-├── Skills — orchestrator, audit (913 lines), diagram (955 lines)
+├── Skills — orchestrator, audit (862 lines), diagram (955 lines)
 └── Memory — shared learnings + per-agent memory
 ```
 
@@ -218,7 +227,7 @@ buddyx-forge generated for 'school':
 - Added .gitignore, removed .pyc files
 - Fixed plugin.json description (all frameworks, not just Laravel)
 - Added tech-stack plugin recommendations (67 plugins/MCP across 12 categories)
-- Ported full audit skill (913 lines) and diagram skill (955 lines) from battle-tested HR project
+- Ported full audit skill (862 lines) and diagram skill (955 lines) from battle-tested HR project
 - Option B: generator creates ALL files (no AI dependency)
 - Renamed /init to /setup to avoid conflict with built-in /init
 

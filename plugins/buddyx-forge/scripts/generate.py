@@ -55,6 +55,28 @@ def load_config(config_path: str) -> dict:
     if formatter and not re.match(r'^[a-zA-Z0-9/_\-. ]+$', formatter):
         raise ValueError(f"Invalid formatter command: '{formatter}'")
 
+    # Validate enum fields
+    valid_budgets = ("budget", "balanced", "quality")
+    if config.get("modelBudget") not in valid_budgets:
+        raise ValueError(f"Invalid modelBudget: '{config.get('modelBudget')}'. Must be one of: {valid_budgets}")
+
+    valid_levels = ("conservative", "balanced", "permissive")
+    if config.get("permissionLevel") not in valid_levels:
+        raise ValueError(f"Invalid permissionLevel: '{config.get('permissionLevel')}'. Must be one of: {valid_levels}")
+
+    valid_policies = ("user", "claude")
+    if config.get("commitPolicy") not in valid_policies:
+        raise ValueError(f"Invalid commitPolicy: '{config.get('commitPolicy')}'. Must be one of: {valid_policies}")
+
+    valid_eval_levels = ("full", "basic", "none")
+    if config.get("evalLevel", "none") not in valid_eval_levels:
+        raise ValueError(f"Invalid evalLevel: '{config.get('evalLevel')}'. Must be one of: {valid_eval_levels}")
+
+    # Validate sharedDb path if provided
+    shared_db = config.get("sharedDb", "")
+    if shared_db and not re.match(r'^[a-zA-Z0-9/_\-. ]+$', shared_db):
+        raise ValueError(f"Invalid sharedDb path: '{shared_db}'. Contains unsafe characters.")
+
     return config
 
 
@@ -149,6 +171,8 @@ def build_settings_json(config: dict) -> str:
         if formatter:
             allow.append(f"Bash({formatter} *)")
         allow.extend(["Bash(ls *)", "Bash(find *)"])
+        ask.extend(fw.get("allow", []))
+        ask.extend(fw.get("ask", []))
     elif perm_level == "balanced":
         if formatter:
             allow.append(f"Bash({formatter} *)")
@@ -199,20 +223,28 @@ def build_settings_json(config: dict) -> str:
         allow.extend(["Bash(git add *)", "Bash(git commit *)", "Bash(git push *)"])
     if hooks_config.get("blockMigration", False):
         pre_tool_use.append({
-            "matcher": "Write|Edit",
+            "matcher": "Write",
+            "hooks": [{"type": "command", "command": ".claude/scripts/block-migration.sh"}]
+        })
+        pre_tool_use.append({
+            "matcher": "Edit",
             "hooks": [{"type": "command", "command": ".claude/scripts/block-migration.sh"}]
         })
     if pre_tool_use:
         hooks["PreToolUse"] = pre_tool_use
 
     post_tool_use = []
-    if hooks_config.get("autoFormat", False):
+    if hooks_config.get("autoFormat", False) and formatter:
         post_tool_use.append({
             "matcher": "Write",
             "hooks": [{"type": "command", "command": ".claude/scripts/auto-format-new-files.sh"}]
         })
     post_tool_use.append({
-        "matcher": "Write|Edit",
+        "matcher": "Write",
+        "hooks": [{"type": "command", "command": ".claude/scripts/detect-new-file-created.sh"}]
+    })
+    post_tool_use.append({
+        "matcher": "Edit",
         "hooks": [{"type": "command", "command": ".claude/scripts/detect-new-file-created.sh"}]
     })
     if post_tool_use:
@@ -251,6 +283,7 @@ def build_settings_json(config: dict) -> str:
         "env": env,
         "plansDirectory": ".claude/plans",
         "autoMemoryEnabled": True,
+        "buddyxForgeVersion": "1.1.0",
     }
 
     if worktree_symlinks:
@@ -276,15 +309,15 @@ def build_domain_map(config: dict) -> str:
     return header + "\n\n---\n\n".join(sections) + "\n"
 
 
-def build_orchestrator_skill(config: dict) -> str:
+def build_orchestrator_skill(config: dict, optional_agents: list = None) -> str:
     """Build the orchestrator SKILL.md."""
     name = config["projectName"]
     title = name.replace("-", " ").title()
     domains = config["domains"]
     keywords = config.get("domainKeywords", {})
     model_budget = config.get("modelBudget", "balanced")
-    rw_model = {"budget": "haiku", "balanced": "sonnet", "quality": "sonnet"}[model_budget]
-    ro_model = {"budget": "haiku", "balanced": "haiku", "quality": "sonnet"}[model_budget]
+    rw_model = {"budget": "haiku", "balanced": "sonnet", "quality": "sonnet"}.get(model_budget, "sonnet")
+    ro_model = {"budget": "haiku", "balanced": "haiku", "quality": "sonnet"}.get(model_budget, "haiku")
 
     # Build keywords table
     kw_rows = []
@@ -304,6 +337,16 @@ def build_orchestrator_skill(config: dict) -> str:
         f"| {name}-team-lead | sonnet | project | multi-agent coordinator |",
         f"| {name}-maintenance | sonnet | project | context file maintenance |",
     ])
+    # Add optional agents if present
+    if optional_agents:
+        for opt in optional_agents:
+            if opt == "query-optimizer":
+                opt_model = {"budget": "sonnet", "balanced": "sonnet", "quality": "opus"}.get(model_budget, "sonnet")
+                inv_rows.append(f"| {name}-query-optimizer | {opt_model} | project | database query optimization |")
+            elif opt == "mcp-dev":
+                inv_rows.append(f"| {name}-mcp-dev | sonnet | project | MCP server development |")
+            elif opt == "migration":
+                inv_rows.append(f"| {name}-migration | sonnet | project | migration & permission specialist |")
     inv_table = "| Agent | Model | Memory | Description |\n|-------|-------|--------|-------------|\n" + "\n".join(inv_rows)
 
     return f"""---
@@ -525,12 +568,18 @@ def build_review_agent(config: dict) -> str:
     name = config["projectName"]
     title = name.replace("-", " ").title()
     model = {"budget": "haiku", "balanced": "haiku", "quality": "sonnet"}.get(config.get("modelBudget", "balanced"), "haiku")
+    has_memory = config.get("agentMemory", True)
 
     checklist = _get_framework_checklist(config)
 
+    if has_memory:
+        mem_block = f"1. READ `.claude/agent-memory/{name}-review/MEMORY.md`\n2. READ `.claude/agent-memory/shared-learnings.md`"
+    else:
+        mem_block = "1. Check project CLAUDE.md for recent learnings and conventions."
+
     return f"""---
 name: {name}-review
-description: Code quality gate. MUST be used PROACTIVELY after any code changes. Auto-trigger when code was written, edited, or created.
+description: Code quality gate. Dispatch after code changes to review quality. Use team-lead for automatic dispatch or invoke manually.
 tools: Read, Grep, Glob, Bash
 disallowedTools: Agent, Write, Edit
 model: {model}
@@ -544,8 +593,7 @@ skills:
 You are the Code Quality Gate for the {title} project. READ ONLY — review and report, never modify.
 
 ## Before You Start
-1. READ `.claude/agent-memory/{name}-review/MEMORY.md`
-2. READ `.claude/agent-memory/shared-learnings.md`
+{mem_block}
 
 CRITICAL: You did NOT write this code. Review it critically. Do NOT say "looks good" unless verified.
 
@@ -578,8 +626,27 @@ def build_team_lead_agent(config: dict) -> str:
     name = config["projectName"]
     title = name.replace("-", " ").title()
     domains = config["domains"]
+    commit_policy = config.get("commitPolicy", "user")
+    has_memory = config.get("agentMemory", True)
 
     domain_list = ", ".join([f"{name}-{d}" for d in domains])
+
+    if commit_policy == "user":
+        hook_block = """hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: ".claude/scripts/block-git-commit.sh"
+"""
+    else:
+        hook_block = ""
+
+    if has_memory:
+        mem_block = f"""1. READ `.claude/agent-memory/{name}-team-lead/MEMORY.md`
+2. READ `.claude/agent-memory/shared-learnings.md`"""
+    else:
+        mem_block = "1. Check project CLAUDE.md for recent learnings and conventions."
 
     return f"""---
 name: {name}-team-lead
@@ -589,19 +656,12 @@ disallowedTools: Write, Edit
 model: sonnet
 memory: project
 maxTurns: 40
-hooks:
-  PreToolUse:
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: ".claude/scripts/block-git-commit.sh"
----
+{hook_block}---
 
 You are the Team Lead for {title} multi-agent operations.
 
 ## Before You Start
-1. READ `.claude/agent-memory/{name}-team-lead/MEMORY.md`
-2. READ `.claude/agent-memory/shared-learnings.md`
+{mem_block}
 
 ## Domain Agents Available
 {domain_list}
@@ -640,7 +700,8 @@ def build_claude_md(config: dict) -> str:
     name = config["projectName"]
     title = name.replace("-", " ").title()
     domains = config["domains"]
-    framework = config.get("techStack", {}).get("framework", "laravel").title()
+    framework_raw = config.get("techStack", {}).get("framework", "laravel").lower()
+    framework = framework_raw.title()
     version = config.get("techStack", {}).get("frameworkVersion", "")
     commit_policy = config.get("commitPolicy", "user")
     has_filament = config.get("techStack", {}).get("hasFilament", False)
@@ -716,6 +777,16 @@ def build_claude_md(config: dict) -> str:
 | No reference | "Is there a working example I should match?" |
 """
 
+    # Framework-specific code style rules
+    code_style_rules = ""
+    if framework_raw == "laravel":
+        code_style_rules = """
+## Code Style Rules
+
+### No Inline FQCN
+- Always add a proper `use` import at the top of the file and reference the short class name.
+"""
+
     return f"""# Project Rules
 
 ## This is a {framework} {version} Project
@@ -731,12 +802,7 @@ def build_claude_md(config: dict) -> str:
 - Never delete or overwrite files without explicit permission.
 - Read files before modifying them — never assume content.
 - Keep changes minimal — only change what's needed.
-
-## Code Style Rules
-
-### No Inline FQCN
-- Always add a proper `use` import at the top of the file and reference the short class name.
-
+{code_style_rules}
 ## Agent Delegation
 
 {delegation}
@@ -888,8 +954,11 @@ def build_rules_md(config: dict) -> str:
 
 ## Security
 
-- Never use `$guarded = []` — always define `$fillable` or equivalent
-- No string concatenation in raw SQL — use parameterized queries
+"""
+    if framework == "laravel":
+        rules += "- Never use `$guarded = []` — always define `$fillable`\n"
+
+    rules += """- No string concatenation in raw SQL — use parameterized queries
 - Validate all user input at system boundaries
 - No secrets in code — use environment variables
 
@@ -934,6 +1003,9 @@ def build_rules_md(config: dict) -> str:
 
 def generate(config: dict, output_dir: str, dry_run: bool = False):
     """Generate the complete .claude/ directory."""
+    global dry_run_count
+    dry_run_count = 0
+
     name = config["projectName"]
     title = name.replace("-", " ").title()
     domains = config["domains"]
@@ -946,11 +1018,187 @@ def generate(config: dict, output_dir: str, dry_run: bool = False):
     test_runner = config.get("techStack", {}).get("testRunner", "")
 
     # Model mapping
-    ro_model = {"budget": "haiku", "balanced": "haiku", "quality": "sonnet"}[model_budget]
-    rw_model = {"budget": "haiku", "balanced": "sonnet", "quality": "sonnet"}[model_budget]
+    model_map_ro = {"budget": "haiku", "balanced": "haiku", "quality": "sonnet"}
+    model_map_rw = {"budget": "haiku", "balanced": "sonnet", "quality": "sonnet"}
+    ro_model = model_map_ro.get(model_budget, "haiku")
+    rw_model = model_map_rw.get(model_budget, "sonnet")
+
+    # Framework-aware template variables
+    framework = config.get("techStack", {}).get("framework", "laravel").lower()
+
+    file_ext_map = {
+        "laravel": r"\.php$", "django": r"\.py$", "go": r"\.go$",
+        "rails": r"\.rb$", "nextjs": r"\.(ts|tsx|js|jsx)$", "react": r"\.(ts|tsx|js|jsx)$",
+        "express": r"\.(ts|js)$",
+    }
+    for alias in ("nodejs", "node", "fastify", "nestjs", "hono"):
+        file_ext_map[alias] = r"\.(ts|js)$"
+
+    source_dir_map = {
+        "laravel": "app/",
+        "django": "",
+        "go": "",
+        "rails": "app/",
+        "nextjs": "src/",
+        "react": "src/",
+        "express": "src/",
+    }
+    for alias in ("nodejs", "node", "fastify", "nestjs", "hono"):
+        source_dir_map[alias] = "src/"
+
+    discovery_commands_map = {
+        "laravel": """find app/Models -name "*.php" | sort
+find app/Filament/Resources -maxdepth 1 -name "*.php" 2>/dev/null | sort
+find app/Http/Controllers -name "*.php" | sort
+find app/Services app/Jobs -name "*.php" 2>/dev/null | sort
+find app/Policies -name "*.php" 2>/dev/null | sort""",
+        "django": """find . -path "*/models.py" -type f | sort
+find . -path "*/views.py" -type f | sort
+find . -path "*/serializers.py" -type f 2>/dev/null | sort
+find . -path "*/admin.py" -type f | sort
+find . -path "*/tasks.py" -type f 2>/dev/null | sort""",
+        "go": """find internal cmd pkg -name "*.go" -type f 2>/dev/null | sort
+find . -name "*_test.go" -type f | sort
+find . -name "*.go" -path "*/handler*" -o -name "*.go" -path "*/service*" 2>/dev/null | sort""",
+        "rails": """find app/models -name "*.rb" | sort
+find app/controllers -name "*.rb" | sort
+find app/services -name "*.rb" 2>/dev/null | sort
+find app/jobs -name "*.rb" 2>/dev/null | sort""",
+        "nextjs": """find src/app -name "page.tsx" -o -name "layout.tsx" 2>/dev/null | sort
+find src/components -name "*.tsx" 2>/dev/null | sort
+find src/lib src/hooks -name "*.ts" 2>/dev/null | sort
+find prisma -name "*.prisma" 2>/dev/null | sort""",
+        "react": """find src/components -name "*.tsx" -o -name "*.jsx" 2>/dev/null | sort
+find src/hooks -name "*.ts" -o -name "*.js" 2>/dev/null | sort
+find src/lib src/utils -name "*.ts" 2>/dev/null | sort""",
+        "express": """find src/api app/api -name "*.ts" -o -name "*.js" 2>/dev/null | sort
+find src/services -name "*.ts" -o -name "*.js" 2>/dev/null | sort
+find src/middleware -name "*.ts" -o -name "*.js" 2>/dev/null | sort""",
+    }
+    for alias in ("nodejs", "node", "fastify", "nestjs", "hono"):
+        discovery_commands_map[alias] = discovery_commands_map["express"]
+
+    db_tools_map = {
+        "laravel": "Use Laravel Boost MCP `database-schema` and `database-query` tools if available, or `php artisan` schema commands.",
+        "django": "Use `python manage.py inspectdb` for schema inspection, or connect directly with `psql`/`mysql` CLI.",
+        "go": "Use `psql` or `mysql` CLI for direct database inspection. Check for GORM/sqlx migration files.",
+        "rails": "Use `rails dbconsole` or `bundle exec rails db:schema:dump`. Check `db/schema.rb` for current state.",
+        "nextjs": "Use Prisma CLI (`npx prisma db pull`, `npx prisma studio`) or direct `psql`/`mysql` access.",
+        "react": "Check for API layer database access. Use `psql`/`mysql` CLI if backend is colocated.",
+        "express": "Check for Sequelize/Knex/TypeORM migrations. Use `psql`/`mysql` CLI for direct access.",
+    }
+    for alias in ("nodejs", "node", "fastify", "nestjs", "hono"):
+        db_tools_map[alias] = db_tools_map["express"]
+
+    maintenance_commands_map = {
+        "laravel": """find app/Models -name "*.php" | sort
+find app/Filament/Resources -maxdepth 1 -name "*.php" 2>/dev/null | sort
+find app/Jobs -name "*.php" 2>/dev/null | sort
+find app/Policies -name "*.php" 2>/dev/null | sort""",
+        "django": """find . -path "*/models.py" -type f | sort
+find . -path "*/views.py" -type f | sort
+find . -path "*/tasks.py" -type f 2>/dev/null | sort""",
+        "go": """find internal cmd pkg -name "*.go" -type f 2>/dev/null | sort
+find . -name "*_test.go" -type f | sort""",
+        "rails": """find app/models -name "*.rb" | sort
+find app/controllers -name "*.rb" | sort
+find app/services -name "*.rb" 2>/dev/null | sort""",
+        "nextjs": """find src/app -name "*.tsx" -o -name "*.ts" 2>/dev/null | sort
+find src/components -name "*.tsx" 2>/dev/null | sort""",
+        "react": """find src/components -name "*.tsx" -o -name "*.jsx" 2>/dev/null | sort
+find src/hooks -name "*.ts" 2>/dev/null | sort""",
+        "express": """find src/api app/api -name "*.ts" -o -name "*.js" 2>/dev/null | sort
+find src/services -name "*.ts" -o -name "*.js" 2>/dev/null | sort""",
+    }
+    for alias in ("nodejs", "node", "fastify", "nestjs", "hono"):
+        maintenance_commands_map[alias] = maintenance_commands_map["express"]
+
+    # Framework-specific hookify rules
+    hookify_rules_map = {
+        "laravel": """## Rule: Block migrations in this project
+- trigger: Write or Edit to `database/migrations/` or `database/seeders/`
+- action: block
+- message: "Migrations must be created in the admin project, not here."
+
+## Rule: No $guarded = []
+- trigger: Write or Edit containing `$guarded = []`
+- action: block
+- message: "Use $fillable instead of $guarded = []. Security requirement."
+
+## Rule: No inline FQCN
+- trigger: Write or Edit containing `\\App\\Models\\` or `\\App\\Enum\\` inline
+- action: warn
+- message: "Add a use import at the top of the file instead of inline FQCN."
+
+## Rule: Match over switch
+- trigger: Write or Edit containing `switch (`
+- action: warn
+- message: "Use match() instead of switch(). PHP 8.1+ convention." """,
+        "django": """## Rule: No raw SQL
+- trigger: Write or Edit containing `.raw(` or `cursor.execute(`
+- action: warn
+- message: "Prefer ORM queries over raw SQL."
+
+## Rule: Check for N+1 queries
+- trigger: Write or Edit to `*/views.py`
+- action: warn
+- message: "Check for N+1 queries -- use select_related/prefetch_related." """,
+        "go": """## Rule: No unchecked errors
+- trigger: Write or Edit containing `_ = err` or `_ = error`
+- action: warn
+- message: "Do not ignore errors -- handle them explicitly."
+
+## Rule: Context propagation
+- trigger: Write or Edit to `*/handler*.go`
+- action: warn
+- message: "Ensure context.Context is passed through request handlers." """,
+        "rails": """## Rule: Strong parameters required
+- trigger: Write or Edit to `*/controllers/*.rb`
+- action: warn
+- message: "Use strong parameters for mass assignment protection."
+
+## Rule: Check for N+1 queries
+- trigger: Write or Edit to `*/controllers/*.rb`
+- action: warn
+- message: "Check for N+1 queries -- use .includes() or .preload()." """,
+    }
+    js_hookify = """## Rule: No any type
+- trigger: Write or Edit containing `: any` or `as any`
+- action: warn
+- message: "Avoid 'any' type -- use proper TypeScript types."
+
+## Rule: Error boundaries
+- trigger: Write or Edit to `*/components/*.tsx`
+- action: warn
+- message: "Consider error boundaries for component error handling." """
+    for fw in ("nextjs", "react", "express", "nodejs", "node", "fastify", "nestjs", "hono"):
+        hookify_rules_map[fw] = js_hookify
 
     if dry_run:
         print(f"\n=== buddyx-forge DRY RUN for '{name}' ===\n")
+
+    # Memory instructions (conditional on agentMemory flag)
+    if has_memory:
+        memory_instructions_domain = f"1. READ `.claude/agent-memory/{name}-{{DOMAIN}}/MEMORY.md`\n2. READ `.claude/agent-memory/shared-learnings.md`"
+        memory_instructions_infra = f"1. READ `.claude/agent-memory/{name}-<agent>/MEMORY.md`\n2. READ `.claude/agent-memory/shared-learnings.md`"
+        memory_write_domain = f"WRITE to `.claude/agent-memory/{name}-{{DOMAIN}}/MEMORY.md`:"
+        memory_write_infra = "WRITE to your agent-memory MEMORY.md if you discovered new patterns."
+    else:
+        memory_instructions_domain = "1. Check project CLAUDE.md for recent learnings and conventions."
+        memory_instructions_infra = "1. Check project CLAUDE.md for recent learnings and conventions."
+        memory_write_domain = "Report any new patterns or conventions you discovered."
+        memory_write_infra = "Report any new patterns or conventions you discovered."
+
+    # Commit hook block (conditional on commitPolicy)
+    if commit_policy == "user":
+        commit_hook_block = """hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: ".claude/scripts/block-git-commit.sh\""""
+    else:
+        commit_hook_block = ""
 
     # Common replacements for templates
     common = {
@@ -960,7 +1208,29 @@ def generate(config: dict, output_dir: str, dry_run: bool = False):
         "DOMAIN_MODEL": rw_model,
         "FORMATTER_CMD": formatter,
         "TEST_RUNNER": test_runner,
+        "FRAMEWORK": framework,
+        "FILE_EXT_FILTER": file_ext_map.get(framework, r"\.php$"),
+        "SOURCE_DIR_FILTER": source_dir_map.get(framework, ""),
+        "DISCOVERY_COMMANDS": discovery_commands_map.get(framework, discovery_commands_map["laravel"]),
+        "DB_TOOLS": db_tools_map.get(framework, db_tools_map["laravel"]),
+        "MAINTENANCE_COMMANDS": maintenance_commands_map.get(framework, maintenance_commands_map["laravel"]),
+        "FRAMEWORK_HOOKIFY_RULES": hookify_rules_map.get(framework, hookify_rules_map.get("laravel", "")),
+        "MEMORY_INSTRUCTIONS_DOMAIN": memory_instructions_domain,
+        "MEMORY_INSTRUCTIONS_INFRA": memory_instructions_infra,
+        "MEMORY_WRITE_DOMAIN": memory_write_domain,
+        "MEMORY_WRITE_INFRA": memory_write_infra,
+        "COMMIT_HOOK_BLOCK": commit_hook_block,
     }
+
+    # Pre-compute optional agents for orchestrator inventory
+    pre_optional = []
+    fw_for_opt = config.get("techStack", {}).get("framework", "laravel").lower()
+    if config.get("sharedDb"):
+        pre_optional.append("migration")
+    if fw_for_opt in ("laravel", "django", "rails", "nextjs", "next.js"):
+        pre_optional.append("query-optimizer")
+    if bool(config.get("mcpServers")) or fw_for_opt in ("nodejs", "node", "express", "fastify"):
+        pre_optional.append("mcp-dev")
 
     # ─── Phase A: Python-generated files ───
 
@@ -1010,7 +1280,7 @@ def generate(config: dict, output_dir: str, dry_run: bool = False):
     # Query optimizer agent — always for Laravel/Filament, optional for others
     framework = config.get("techStack", {}).get("framework", "").lower()
     if framework in ("laravel", "django", "rails", "nextjs", "next.js"):
-        optimizer_model = {"budget": "sonnet", "balanced": "sonnet", "quality": "opus"}[model_budget]
+        optimizer_model = {"budget": "sonnet", "balanced": "sonnet", "quality": "opus"}.get(model_budget, "sonnet")
         opt_content = render_template("agent-query-optimizer.tmpl", {
             **common,
             "OPTIMIZER_MODEL": optimizer_model,
@@ -1032,7 +1302,7 @@ def generate(config: dict, output_dir: str, dry_run: bool = False):
             write_file(output_dir, f"agent-memory/{name}-mcp-dev/MEMORY.md", mem_content, dry_run)
 
     # 4. Orchestrator SKILL.md (builder)
-    write_file(output_dir, f"skills/{name}/SKILL.md", build_orchestrator_skill(config), dry_run)
+    write_file(output_dir, f"skills/{name}/SKILL.md", build_orchestrator_skill(config, pre_optional), dry_run)
 
     # 5. Domain map (builder)
     write_file(output_dir, f"skills/{name}/context/domain-map.md", build_domain_map(config), dry_run)
@@ -1142,7 +1412,12 @@ def generate(config: dict, output_dir: str, dry_run: bool = False):
         write_file(output_dir, "scripts/block-git-commit.sh", content, dry_run)
         hook_scripts.append("scripts/block-git-commit.sh")
 
-    if hooks_cfg.get("autoFormat", False):
+    if hooks_cfg.get("blockMigration", False):
+        content = render_template("hooks/block-migration.sh.tmpl", common)
+        write_file(output_dir, "scripts/block-migration.sh", content, dry_run)
+        hook_scripts.append("scripts/block-migration.sh")
+
+    if hooks_cfg.get("autoFormat", False) and formatter:
         content = render_template("hooks/auto-format-new-files.sh.tmpl", common)
         write_file(output_dir, "scripts/auto-format-new-files.sh", content, dry_run)
         hook_scripts.append("scripts/auto-format-new-files.sh")
@@ -1188,9 +1463,9 @@ def generate(config: dict, output_dir: str, dry_run: bool = False):
     print(f"  Hook scripts: {len(hook_scripts)}")
     print(f"  Files created: {file_count}")
     print(f"\n  Next steps:")
-    print(f"  1. AI customization will fill CLAUDE.md, RULES.md, and agent file lists")
-    print(f"  2. Run /buddyx-forge:scan to populate domain-map and context packs")
-    print(f"  3. Run /buddyx-forge:health to verify setup")
+    print(f"  1. Run /buddyx-forge:scan to populate domain-map with real file paths")
+    print(f"  2. Run /buddyx-forge:health to verify setup")
+    print(f"  3. Customize agent files if needed (see references/customize-guide.md)")
 
 
 # ─── CLI ENTRY POINT ───

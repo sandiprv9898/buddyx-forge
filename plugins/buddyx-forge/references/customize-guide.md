@@ -84,7 +84,7 @@ If user chose Q8=Yes, generate:
 Create `.claude/skills/{name}/RULES.md` with 3 tiers.
 
 ### Tier 1: Universal (always include)
-Read `references/framework-laravel.md` for the complete list of Laravel rules.
+Read `references/framework-{detected_framework}.md` for the framework-specific rules.
 
 ### Tier 2: Detected Conventions
 Read 3-5 existing model files. Use these commands to detect each convention:
@@ -143,10 +143,9 @@ From setup answers:
 
 For each domain agent `.claude/agents/{name}-{domain}.md`:
 
-1. Scan `app/Models/` for files matching domain keywords
-2. Scan `app/Filament/Resources/` for matching resources
-3. Scan `app/Jobs/`, `app/Exports/`, `app/Imports/`, `app/Policies/`, `app/Services/`
-4. Use Edit tool to replace placeholder in `## Your Files` section
+1. Scan the project's source directories for files relevant to each domain
+2. Use the discovery commands from the agent's instructions to find matching files
+3. Use Edit tool to replace placeholder in `## Your Files` section
 
 If no files found → leave placeholder: `<!-- No files detected yet. Run /buddyx-forge:scan after adding code. -->`
 

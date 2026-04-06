@@ -177,6 +177,46 @@ test("Go no MCP → no mcp-dev", not os.path.exists(os.path.join(outdir, ".claud
 shutil.rmtree(outdir)
 
 
+# === Enum Validation ===
+print("\n=== Enum Validation ===")
+
+# modelBudget
+try:
+    cfg = make_config({"modelBudget": "premium"})
+    cfg_path = write_config(cfg)
+    load_config(cfg_path)
+    test("invalid modelBudget rejected", False)
+except ValueError:
+    test("invalid modelBudget rejected", True)
+
+# permissionLevel
+try:
+    cfg = make_config({"permissionLevel": "strict"})
+    cfg_path = write_config(cfg)
+    load_config(cfg_path)
+    test("invalid permissionLevel rejected", False)
+except ValueError:
+    test("invalid permissionLevel rejected", True)
+
+# commitPolicy
+try:
+    cfg = make_config({"commitPolicy": "manual"})
+    cfg_path = write_config(cfg)
+    load_config(cfg_path)
+    test("invalid commitPolicy rejected", False)
+except ValueError:
+    test("invalid commitPolicy rejected", True)
+
+# evalLevel
+try:
+    cfg = make_config({"evalLevel": "ultra"})
+    cfg_path = write_config(cfg)
+    load_config(cfg_path)
+    test("invalid evalLevel rejected", False)
+except ValueError:
+    test("invalid evalLevel rejected", True)
+
+
 # ─── TEST 4: Memory Flag ───
 
 print("\n=== Memory Flag ===")
@@ -208,6 +248,22 @@ for fw, expected_cmd in [("laravel", "php artisan"), ("django", "python manage.p
     perms = str(settings.get("permissions", {}).get("allow", []))
     test(f"{fw}: has '{expected_cmd}' in permissions", expected_cmd in perms)
     shutil.rmtree(outdir)
+
+
+# === Conservative Permissions ===
+print("\n=== Conservative Permissions ===")
+outdir = tempfile.mkdtemp()
+try:
+    cfg = make_config({"permissionLevel": "conservative", "techStack": {
+        "language": "go", "framework": "go", "formatter": "gofmt", "testRunner": "go test ./..."
+    }})
+    generate(cfg, outdir)
+    with open(os.path.join(outdir, "settings.json")) as f:
+        settings = json.load(f)
+    perms_str = json.dumps(settings["permissions"])
+    test("conservative: framework commands in ask", "go build" in perms_str)
+finally:
+    shutil.rmtree(outdir, ignore_errors=True)
 
 
 # ─── Summary ───

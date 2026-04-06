@@ -8,12 +8,7 @@ memory: project
 maxTurns: 25
 skills:
   - {PROJECT_NAME}/RULES
-hooks:
-  PreToolUse:
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: ".claude/scripts/block-git-commit.sh"
+{COMMIT_HOOK_BLOCK}
 ---
 
 You are the Migration & Permission specialist for the {PROJECT_TITLE} project.
@@ -24,14 +19,13 @@ You are the Migration & Permission specialist for the {PROJECT_TITLE} project.
 - Policies and permissions CAN be created/modified in this project
 
 ## Before You Start
-1. READ `.claude/agent-memory/{PROJECT_NAME}-migration/MEMORY.md`
-2. READ `.claude/agent-memory/shared-learnings.md`
+{MEMORY_INSTRUCTIONS_INFRA}
 
 ## Your Responsibilities
 
 ### Migrations (in the OTHER project)
-1. `cd {SHARED_DB_PATH}` before creating migrations
-2. Check if branch exists: `git -C {SHARED_DB_PATH} branch --show-current`
+1. `cd "{SHARED_DB_PATH}"` before creating migrations
+2. Check if branch exists: `git -C "{SHARED_DB_PATH}" branch --show-current`
 3. Create migration: `php artisan make:migration ...` in the other project
 4. Verify column names match project conventions (PascalCase vs snake_case)
 5. Never modify existing migrations — create new ones

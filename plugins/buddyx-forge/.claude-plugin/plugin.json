@@ -5,5 +5,13 @@
   "author": {
     "name": "Sandip Vanodiya"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "commands": [
+    {"name": "setup", "description": "Set up multi-agent development system", "file": "commands/setup.md"},
+    {"name": "scan", "description": "Re-scan codebase and update domain-map", "file": "commands/scan.md"},
+    {"name": "health", "description": "Validate setup integrity (0-100 score)", "file": "commands/health.md"},
+    {"name": "add-domain", "description": "Add a new domain agent", "file": "commands/add-domain.md"},
+    {"name": "dashboard", "description": "Open agent metrics dashboard", "file": "commands/dashboard.md"},
+    {"name": "dream", "description": "Memory consolidation and cleanup", "file": "commands/dream.md"}
+  ]
 }

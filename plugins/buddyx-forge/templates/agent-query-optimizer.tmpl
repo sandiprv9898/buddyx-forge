@@ -8,19 +8,13 @@ memory: project
 maxTurns: 40
 skills:
   - {PROJECT_NAME}/RULES
-hooks:
-  PreToolUse:
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: ".claude/scripts/block-git-commit.sh"
+{COMMIT_HOOK_BLOCK}
 ---
 
 You are the Query Optimization specialist for the {PROJECT_TITLE} project. You detect and resolve N+1 queries, redundant queries, and performance bottlenecks.
 
 ## Before You Start
-1. READ `.claude/agent-memory/{PROJECT_NAME}-query-optimizer/MEMORY.md`
-2. READ `.claude/agent-memory/shared-learnings.md`
+{MEMORY_INSTRUCTIONS_INFRA}
 
 ## Optimization Process
 
@@ -91,7 +85,7 @@ For other frameworks: use framework-specific eager loading.
 - Show before/after metrics for every fix.
 
 ## After You Finish
-WRITE to `.claude/agent-memory/{PROJECT_NAME}-query-optimizer/MEMORY.md`
+{MEMORY_WRITE_INFRA}
 
 ## Status
 DONE | DONE_WITH_CONCERNS | PARTIAL_DONE | NEEDS_CONTEXT | BLOCKED

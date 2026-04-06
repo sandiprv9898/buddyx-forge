@@ -1,0 +1,866 @@
+---
+name: myapp-audit
+description: Audit any Myapp module — shows DB schema, relationships, data lineage, resource mechanics, jobs, policies. Use when user says "/audit" followed by a module name. Supports text output (default) and interactive HTML visualization.
+---
+
+# Module Audit Visualizer
+
+Audit any module in the Myapp project. Shows full details: DB schema, relationships, data lineage, resource mechanics, jobs, policies, and more. Two output modes: text in conversation (default) or interactive HTML file.
+
+## Trigger
+
+User says `/audit <module>` with optional flags. Examples:
+- `/audit leave` — text audit in conversation
+- `/audit leave html` — visual HTML file
+- `/audit leave html fresh` — HTML, ignore cache
+- `/audit leave + payroll` — multi-module audit
+- `/audit leave + career html` — multi-module HTML
+
+## Step 1: Parse Command
+
+Extract from the user's `/audit` command:
+
+1. **Module name** (required) -- the first argument after `/audit`
+2. **`html` flag** (optional) -- if present, generate an interactive HTML report instead of markdown
+3. **`fresh` flag** (optional) -- if present, skip any cached/previous audit results and re-scan everything from scratch
+
+### Available Modules
+
+| Module | Description |
+|--------|-------------|
+| `billing` | Billing |
+| `auth` | Auth |
+| `users` | Users |
+
+### Parsing Rules
+
+1. Split the text after `/audit` by whitespace
+2. Check for `+` token — if present, this is a **multi-module audit**. Collect all module names (tokens before and after `+`, excluding flags)
+3. Match each module name against the available modules list (case-insensitive)
+4. Remaining tokens are checked for `html` and `fresh` flags (order does not matter)
+5. Unknown flags are ignored with a warning
+
+**Multi-module example:** `/audit leave + payroll html` → modules: `["leave", "payroll"]`, html: true
+
+### Error: Unrecognized Module
+
+If the module name does not match any entry in the available modules list, stop and show:
+
+```
+Unknown module: "{input}"
+
+Available modules: see the table above.
+
+Usage: /audit <module> [html] [fresh]
+```
+
+Do NOT proceed to further steps if the module is not recognized.
+
+## Step 2: Resolve Module to File List
+
+Map the parsed module name(s) to concrete file paths using the domain map.
+
+### 2a: Read the Domain Map
+
+Read the file `.claude/skills/myapp/context/domain-map.md` and locate the `## {module}` section header (e.g., `## leave`).
+
+### 2b: Extract File Paths
+
+Under that section, extract two groups:
+
+| Group | Section Header | Meaning |
+|-------|---------------|---------|
+| **Owned files** | `### Read/Write` | Files the module owns — full audit applies |
+| **Dependency files** | `### Read Only` | Files from other modules referenced by this one — included for relationship/lineage tracing only |
+
+### 2c: Expand Glob Patterns
+
+Some entries contain glob patterns (e.g., `app/Filament/Resources/EmployeeLeavesResource/**/*.php`). Expand each using the Glob tool:
+
+```
+Glob pattern: "app/Filament/Resources/EmployeeLeavesResource/**/*.php"
+```
+
+Replace the glob entry with the resolved list of actual file paths.
+
+### 2d: Keyword Fallback
+
+If the module name is NOT found in the domain map (no `## {module}` header exists), fall back to keyword scanning:
+
+1. Scan the project's source directories for files matching `*{keyword}*` using Glob:
+   ```
+   Glob pattern: "app/**/*{keyword}*"
+   ```
+2. Add a warning to the output: `"WARNING: Module '{module}' not found in domain-map.md. Using keyword fallback — results may be incomplete."`
+
+### 2e: Multi-Module Merge
+
+When multiple modules are requested (e.g., `/audit leave + payroll`):
+
+1. Resolve each module's file list independently (steps 2a-2d)
+2. Merge all lists into one combined list
+3. If a file appears in more than one module's list, tag it as `[shared]`
+4. Track which module each file belongs to — needed for per-module sections in the output
+
+### 2f: File List Summary
+
+After resolution, organize files into categories based on the project's structure (models, controllers/resources, services, jobs, tests, configs, etc.). Use the domain map's file groupings as a guide.
+
+Store this categorized list — all subsequent steps reference it.
+
+---
+
+## Step 3: Run Context Script
+
+Extract structured model and schema data using the project's context extraction script.
+
+### 3a: Read the Context Pack
+
+Read the domain's context pack at:
+
+```
+.claude/skills/myapp/context/agent-context/{module}-context.md
+```
+
+If the file does not exist or is empty, proceed to Step 3d (fallback).
+
+### 3b: Parse the Context
+
+The file is structured Markdown containing:
+
+| Section | Format | Contains |
+|---------|--------|----------|
+| Table Schemas | `\| Column \| Type \| Notes \|` tables | DB column names, types, nullable, defaults |
+| Model Snippets | PHP code blocks | `$fillable`, `$casts`, relationship methods, traits |
+| Resource Snippets | PHP code blocks | Form schema fields, table column definitions |
+
+### 3c: Extract Key Data
+
+From the context file, extract and store:
+
+- **Model list** — all model class names found
+- **Table schemas** — column/type/nullable for each table
+- **Relationships** — belongsTo, hasMany, morphTo, etc. with related model names
+- **Fillable columns** — from each model's `$fillable` array
+- **Casts** — from each model's `$casts` array (especially enum casts)
+- **Traits** — all `use TraitName;` statements in each model
+- **Resource fields** — form fields and table columns from resource snippets
+
+### 3d: Fallback on Script Failure
+
+If the script fails (non-zero exit code or missing output file):
+
+1. Add a warning: `"WARNING: Context extraction script failed. Falling back to direct file parsing."`
+2. Read each model file from the Step 2 file list directly
+3. Parse `$fillable`, `$casts`, relationships, and traits manually using string matching
+4. Continue to Step 4 — do NOT stop the audit
+
+---
+
+## Step 4: Get DB Schema
+
+Enrich the data with live database schema information.
+
+### 4a: Schema for Each Table
+
+Use Laravel Boost MCP `database-schema` and `database-query` tools if available, or `php artisan` schema commands.
+
+For each model/entity identified in Step 3, get its table schema. Extract:
+- Column names and data types
+- Nullable flags
+- Default values
+- Foreign key constraints (referenced table + column)
+- Indexes (unique, composite, partial)
+
+### 4b: Sample Data
+
+Query each table for a few sample rows to understand real data patterns:
+- Which columns are actually populated vs always null
+- Enum value patterns
+- FK reference patterns
+
+### 4c: Fallback if DB Tools Unavailable
+
+If database tools fail or are unavailable:
+
+1. Add a warning: `"WARNING: Database tools unavailable. Using code metadata only — schema details may be incomplete."`
+2. Use model/entity definitions for column names and types
+3. Use relationship definitions for FK inference
+4. Continue to Step 5 — do NOT stop the audit
+
+---
+
+## Step 5: Deep File Parse
+
+Read the actual PHP files to extract details the context script does not cover.
+
+### 5a: Model Files
+
+For each model file in the file list:
+
+**Observers** — Find PHP 8 attributes:
+```php
+#[ObservedBy(ClassName::class)]
+```
+Record the observer class name. Read the observer file if it exists in the file list.
+
+**Scopes** — Find PHP 8 attributes and scope methods:
+```php
+#[ScopedBy(ClassName::class)]
+// and
+public function scopeActive($query) { ... }
+```
+
+**Accessors** — Find accessor methods:
+```php
+public function getFullNameAttribute() { ... }
+```
+Record: method name, return type (if declared), one-line summary of the logic.
+
+**Boot events** — Find lifecycle hooks inside `booted()` or `boot()`:
+```php
+static::created(function ($model) { ... });
+static::updated(function ($model) { ... });
+static::deleted(function ($model) { ... });
+```
+Record: event name, one-line summary of side effects.
+
+**Enums from casts** — For each enum in the model's `$casts` array:
+1. Resolve the enum class path (e.g., `'Status' => LeaveStatus::class` points to `app/Enum/LeaveStatus.php`)
+2. Read the enum file
+3. Extract: backed type (string/int), case names, case values, any methods (`label()`, `badgeColor()`, `icon()`)
+
+### 5b: Resource Files
+
+For each resource file (`*Resource.php`) and its page files:
+
+**Form fields** — Parse the `form()` method. For each field extract:
+
+| Property | Example |
+|----------|---------|
+| Component type | `TextInput`, `Select`, `DatePicker` |
+| Field name | `'EmployeeId'`, `'StartDate'` |
+| Required | `->required()` present? |
+| Live | `->live()` present? |
+| Searchable | `->searchable()` present? |
+| Validation rules | `->rules([...])` — summarize closure logic in one line |
+| Conditional visibility | `->visible(fn ...)`, `->hidden(fn ...)` — summarize condition |
+
+**Table columns** — Parse the `table()` method. For each column extract:
+
+| Property | Example |
+|----------|---------|
+| Component type | `TextColumn`, `BadgeColumn`, `IconColumn` |
+| Column name | `'employee.FullName'` |
+| Locale switching | Check for `getLang() == 'ar' ? 'X' : 'Y'` ternary — record both variants |
+| Sortable | `->sortable()` present? |
+| Searchable | `->searchable()` — note if custom search scope is used |
+| Toggleable | `->toggleable()` present? |
+| formatStateUsing | Record the transform logic |
+| Badge/color/icon | Record color mapping and icon |
+
+**Filters** — Parse `filters()` in the table method:
+- Filter type (`SelectFilter`, `TernaryFilter`, `Filter`)
+- Options source (enum, query, static array)
+- Query effect (what WHERE clause it adds)
+
+**Actions** — Parse header actions, table row actions, and bulk actions:
+- Action name and icon
+- Color
+- Confirmation dialog (yes/no)
+- Permission gate (`->authorize()` or `->visible()` with permission check)
+- Dispatched job (if the action dispatches a queue job)
+- Side effects (notifications, redirects, model updates)
+
+**Eager loading** — Find any of these patterns:
+```php
+->modifyQueryUsing(fn ($query) => $query->with([...]))
+// or in getEloquentQuery():
+return parent::getEloquentQuery()->with([...]);
+// or inline:
+->relationship('name', modifyQueryUsing: fn ($query) => $query->with([...]))
+```
+List all eager-loaded relationships with their column selections.
+
+**Default sort** — Find `->defaultSort('column', 'direction')`
+
+**Pagination** — Find `->paginated([10, 25, 50])` or similar
+
+**Search** — Find columns with `->searchable()`, note any custom search scopes
+
+### 5c: Employer Embedded Pages
+
+For each file in `app/Filament/Resources/EmployerResource/Pages/` that belongs to this module:
+
+Apply the same extraction as 5b, but also note:
+- This is an embedded page (shown inside the Employer resource, not standalone)
+- It may have different eager loading than the standalone resource
+- It may omit the employee column (since the employee context is already known)
+
+### 5d: Job Files
+
+For each job file:
+
+| Property | What to extract |
+|----------|----------------|
+| Queue traits | `ShouldQueue`, `InteractsWithQueue`, `Queueable`, `SerializesModels` |
+| Constructor params | Parameter names and types |
+| handle() method | Query logic, eager loading, output format (PDF/Excel), storage path, notification sent |
+| failed() method | Error handling and notification on failure |
+| Filter support | Whether the job accepts filters (date range, status, etc.) |
+| Chunking | `chunk()`, `chunkById()`, `cursor()` usage |
+
+### 5e: Policy Files
+
+For each policy file:
+
+Extract method names and the permission string they check. Pattern is typically:
+```php
+public function viewAny(User $user): bool
+{
+    return $user->hasPermission('ums:hr:employee-leaves:view');
+}
+```
+
+Record: `viewAny → ums:hr:employee-leaves:view`, `create → ums:hr:employee-leaves:create`, etc.
+
+### 5f: Service and Helper Files
+
+For each service or helper file:
+
+- List public method names
+- One-line purpose summary for each method (derived from method name + first few lines of logic)
+
+### 5g: Import Files
+
+For each import file:
+
+- Template generator method (what columns the template includes)
+- Validation rules (required fields, types, enum constraints)
+- Processing logic (what model it creates/updates)
+- Batch handling (chunk size, queue dispatch)
+- Error export class (what file it generates for invalid rows)
+
+### 5h: Scaling for Large Modules
+
+For modules with more than 10 models (e.g., `payroll`), the parse becomes too large for a single pass. In this case, dispatch parallel Explore agents:
+
+- **Agent 1:** Models + relationships + enums
+- **Agent 2:** Resources + employer pages
+- **Agent 3:** Jobs + imports + exports
+
+Each agent returns its parsed data, which is merged before proceeding to Step 6.
+
+---
+
+## Step 6: Data Lineage Tracing
+
+Trace how data flows from the database to the UI. This is the most critical step — it maps every visible field back to its source column(s).
+
+### 6a: Tracing Algorithm
+
+For each table column and form field extracted in Step 5b:
+
+1. **Get the column name** — e.g., `'leavePolicy.leaveType.ArabicName'`
+2. **Check for locale switching** — if the column name contains a ternary like `getLang() == 'ar' ? 'ArabicName' : 'EnglishName'`, trace BOTH variants
+3. **Parse dot-notation** — split by `.` into segments: `['leavePolicy', 'leaveType', 'ArabicName']`
+4. **Walk the relationship chain:**
+   - Start at the resource's model (e.g., `HR_EmployeeLeaves`)
+   - Find the `leavePolicy()` relationship method → get the related model (e.g., `CONST_LeavePolicy`)
+   - Find the `leaveType()` relationship method on that model → get `CONST_LeaveType`
+   - The final segment `ArabicName` is the DB column on `CONST_LeaveType`
+5. **Verify against DB schema** — confirm the column exists in the table schema from Step 4
+
+### 6b: Lineage Classification
+
+Classify each traced field into one of these types:
+
+| Type | Condition | Example |
+|------|-----------|---------|
+| `direct` | No dots, column exists in the model's own DB table | `StartDate` on `HR_EmployeeLeaves` |
+| `fk_chain` | Has dots, all FK relationships confirmed in schema | `leavePolicy.leaveType.ArabicName` |
+| `accessor` | Final segment resolves to a `get*Attribute()` method, not a DB column | `employee.FullName` where FullName is an accessor |
+| `computed_aggregate` | Uses `DB::raw()`, `selectRaw()`, or scope with aggregation | `total_days` from a SUM query |
+| `conditional_state` | Column uses `->state(fn ...)` closure to override the value | Badge color derived from status |
+| `polymorphic` | Relationship is `morphTo` or `morphMany` | Approvable references |
+| `belongs_to_many` | Relationship goes through a pivot table | Committee members |
+| `enum_transform` | Value is an enum cast + `formatStateUsing` or `->label()` | Status displayed as Arabic label |
+
+### 6c: Confidence Scoring
+
+| Level | Criteria |
+|-------|----------|
+| **high** | DB FK constraint confirmed in schema AND column exists in target table |
+| **medium** | Model relationship code exists but no FK constraint in DB, or column confirmed but relationship is code-only |
+| **low** | Partial chain — some segment could not be resolved, or accessor logic is opaque |
+
+### 6d: Record Transforms
+
+For each field, also record any display transforms applied:
+
+- `formatStateUsing(fn ...)` — what the closure does
+- `->badge()` — badge styling
+- `->color(fn ...)` — color mapping logic
+- `->icon(fn ...)` — icon mapping logic
+- `->description(fn ...)` — description below the value
+- `->money()`, `->date()`, `->dateTime()` — formatting helpers
+
+### 6e: Edge Cases
+
+| Case | Handling |
+|------|----------|
+| **Circular references** | Stop walking after 5 hops. Mark as `[circular]` |
+| **Broken chains** | If a relationship method does not exist or returns unknown model, mark as `[broken: segment_name]` |
+| **Opaque accessors** | If an accessor's logic is too complex to summarize (>10 lines, multiple conditionals), mark as `[opaque]` and include the file path for manual review |
+| **Dynamic column names** | If column name is computed at runtime (variable, not string literal), mark as `[dynamic]` |
+| **Pivot columns** | For belongsToMany, also trace `->withPivot([...])` columns |
+
+---
+
+## Step 7: Text Output (Default)
+
+When the `html` flag is NOT set, output the audit as structured text directly in the conversation. Include all 11 sections below.
+
+### Section 1: Summary
+
+```
+# {Module} Module Audit
+Generated: {date} | Branch: {git_branch}
+
+Models: {count} | Tables: {count} | Resources: {count} | Jobs: {count}
+Relationships: {count} | Lineage Fields: {count} (high: X, medium: Y, low: Z)
+
+Warnings:
+- {any warnings from Steps 2-6, or "None"}
+```
+
+### Section 2: DB Tables
+
+For each table, show column details:
+
+```
+## DB Tables
+
+### {TableName}
+| Column | Type | Nullable | Default | FK → |
+|--------|------|----------|---------|------|
+| Id | bigint | NO | — | — |
+| EmployeeId | bigint | NO | — | HR_Employees.Id |
+| StartDate | date | NO | — | — |
+| Status | smallint | NO | 0 | — (enum: LeaveStatus) |
+| ... | | | | |
+Indexes: PK(Id), IX_EmployeeId(EmployeeId), UQ_...(...)
+```
+
+### Section 3: Relationships
+
+```
+## Relationships
+
+| From | Relation | To | FK Column | Type |
+|------|----------|----|-----------|------|
+| HR_EmployeeLeaves | belongsTo | HR_Employees | EmployeeId | FK confirmed |
+| HR_EmployeeLeaves | belongsTo | CONST_LeavePolicy | LeavePolicyId | FK confirmed |
+| CONST_LeavePolicy | belongsTo | CONST_LeaveType | LeaveTypeId | FK confirmed |
+| HR_EmployeeLeaves | hasMany | HR_EmployeeLeaveTransaction | EmployeeLeaveId | FK confirmed |
+```
+
+### Section 4: Data Lineage
+
+```
+## Data Lineage
+
+| Confidence | UI Field | Source Table.Column | Chain | Type |
+|------------|----------|--------------------|-|------|
+| high | Employee Name | HR_Employees.FullName | employee.FullName | fk_chain |
+| high | Leave Type | CONST_LeaveType.ArabicName | leavePolicy.leaveType.ArabicName | fk_chain |
+| medium | Status | HR_EmployeeLeaves.Status | Status | enum_transform |
+| low | Total Days | — | computed in accessor | accessor [opaque] |
+```
+
+### Section 5: Field Map
+
+```
+## Field Map
+
+| DB Column | Form Field | Table Column | Export Column |
+|-----------|-----------|--------------|---------------|
+| HR_EmployeeLeaves.StartDate | DatePicker (required) | TextColumn (sortable) | Column C |
+| HR_EmployeeLeaves.Status | Select (enum) | BadgeColumn (colored) | Column F |
+```
+
+### Section 6: Data Flow
+
+```
+## Data Flow
+
+### Create Leave
+1. User fills form → EmployeeLeavesResource::form()
+2. Validation: required fields, date range check, balance check
+3. Model::create() → HR_EmployeeLeaves table
+4. Observer: HR_EmployeeLeavesObserver::created() → creates transaction record
+5. Notification sent to approver
+
+### Export Leaves PDF
+1. User clicks export action → dispatches ExportEmployeeLeavesPdfJob
+2. Job queries HR_EmployeeLeaves with filters
+3. Generates PDF via PdfHelper
+4. Stores in storage/app/exports/
+5. Sends notification with download link
+```
+
+### Section 7: Enums
+
+```
+## Enums
+
+### LeaveStatus (app/Enum/LeaveStatus.php)
+Backed type: int
+
+| Case | Value | Label (AR) | Label (EN) | Badge Color |
+|------|-------|-----------|-----------|-------------|
+| Pending | 0 | معلق | Pending | warning |
+| Approved | 1 | موافق | Approved | success |
+| Rejected | 2 | مرفوض | Rejected | danger |
+```
+
+### Section 8: Resources
+
+```
+## Resources
+
+### EmployeeLeavesResource
+
+**Form Fields:**
+| Field | Component | Required | Live | Validation |
+|-------|-----------|----------|------|------------|
+| EmployeeId | Select | Yes | Yes | exists:HR_Employees,Id |
+| StartDate | DatePicker | Yes | No | date, after:today |
+
+**Table Columns:**
+| Column | Component | Sortable | Searchable | Toggleable | Transform |
+|--------|-----------|----------|------------|------------|-----------|
+| employee.FullName | TextColumn | Yes | Yes (custom scope) | No | — |
+| Status | BadgeColumn | Yes | No | No | enum label + color |
+
+**Filters:**
+| Filter | Type | Options |
+|--------|------|---------|
+| Status | SelectFilter | LeaveStatus enum |
+| LeaveType | SelectFilter | CONST_LeaveType query |
+
+**Search:** Global search on employee.FullName (custom scope via SearchHelper)
+
+**Actions:**
+| Action | Type | Permission | Side Effect |
+|--------|------|------------|-------------|
+| Export PDF | Header | ums:hr:employee-leaves:export | Dispatches ExportEmployeeLeavesPdfJob |
+| Delete | Row | ums:hr:employee-leaves:delete | Soft delete |
+
+**Eager Loading:** employee, leavePolicy.leaveType, transactions
+**Default Sort:** CreationTime DESC
+**Pagination:** [10, 25, 50]
+```
+
+### Section 9: Observers
+
+```
+## Observers
+
+### HR_EmployeeLeavesObserver
+| Event | Side Effect |
+|-------|-------------|
+| created | Creates HR_EmployeeLeaveTransaction record, updates leave balance |
+| updated | Recalculates balance if status changed |
+| deleted | Reverses the leave transaction |
+```
+
+### Section 10: Jobs
+
+```
+## Jobs
+
+### ExportEmployeeLeavesPdfJob
+| Property | Value |
+|----------|-------|
+| Queue | default |
+| Traits | ShouldQueue, InteractsWithQueue, Queueable, SerializesModels |
+| Constructor | $filters (array), $userId (int) |
+| Query | HR_EmployeeLeaves with employee, leavePolicy.leaveType |
+| Output | PDF stored at storage/app/exports/leaves_{timestamp}.pdf |
+| Notification | Database notification with download link |
+| Error handling | failed() logs error and notifies user |
+| Chunking | chunkById(100) |
+```
+
+### Section 11: Policies
+
+```
+## Policies
+
+### EmployeeLeavesPolicy
+| Method | Permission String |
+|--------|-------------------|
+| viewAny | ums:hr:employee-leaves:view |
+| create | ums:hr:employee-leaves:create |
+| update | ums:hr:employee-leaves:update |
+| delete | ums:hr:employee-leaves:delete |
+| export | ums:hr:employee-leaves:export |
+```
+
+### Closing
+
+End the text output with:
+
+```
+---
+Text audit complete for {module} module. {total_fields} fields traced, {high_count} high confidence, {warnings_count} warnings.
+
+Run `/audit {module} html` to generate an interactive HTML version with ER diagrams, data flow visualizations, and filterable tables.
+```
+
+---
+
+## Step 8: HTML Output + Cache
+
+When the `html` flag IS set, generate an interactive HTML file instead of text output.
+
+### 8a: Cache Check
+
+**Skip this step if `fresh` flag is set.**
+
+Check for an existing cached audit:
+
+1. Look for `.claude/audits/{module}/audit-meta.json`
+2. If the file exists, read it. It contains:
+   ```json
+   {
+     "timestamp": "2026-03-31T14:30:00Z",
+     "branch": "feature/xyz",
+     "checksums": {
+       "app/Models/HR_EmployeeLeaves.php": "abc123...",
+       "app/Filament/Resources/EmployeeLeavesResource.php": "def456...",
+       ...
+     }
+   }
+   ```
+3. For each file in the checksums, compute current checksum: `md5sum {file_path}`
+4. Compare results:
+
+| Result | Action |
+|--------|--------|
+| **ALL checksums match** | Print `"No changes detected since last audit ({timestamp}). Opening existing HTML..."` → run `xdg-open .claude/audits/{module}/{module}-audit.html` → **STOP** |
+| **SOME checksums differ** | Print `"{X} files changed since last audit. Updating incrementally..."` → re-collect data only for changed files → merge updated data into existing `audit-data.json` → continue to 8c |
+| **File does not exist** | First audit — proceed with full collection |
+
+### 8b: Build JSON
+
+Assemble all collected data from Steps 3-6 into a single JSON object with these 16 top-level keys:
+
+```json
+{
+  "meta": {
+    "module": "leave",
+    "generatedAt": "2026-03-31T14:30:00Z",
+    "branch": "feature/xyz",
+    "version": "1.0"
+  },
+  "summary": {
+    "modelCount": 5,
+    "tableCount": 5,
+    "resourceCount": 2,
+    "jobCount": 8,
+    "relationshipCount": 12,
+    "lineageFieldCount": 34,
+    "lineageConfidence": { "high": 28, "medium": 4, "low": 2 },
+    "warnings": ["..."]
+  },
+  "models": {
+    "HR_EmployeeLeaves": {
+      "file": "app/Models/HR_EmployeeLeaves.php",
+      "table": "HR_EmployeeLeaves",
+      "fillable": ["EmployeeId", "StartDate", "..."],
+      "casts": { "Status": "LeaveStatus" },
+      "traits": ["SoftDeletes", "HasFactory"],
+      "accessors": [{ "name": "getFullNameAttribute", "returns": "string", "summary": "..." }],
+      "bootEvents": [{ "event": "created", "summary": "..." }],
+      "observers": ["HR_EmployeeLeavesObserver"],
+      "scopes": ["ScopedByOrganization"]
+    }
+  },
+  "tables": {
+    "HR_EmployeeLeaves": {
+      "columns": [
+        { "name": "Id", "type": "bigint", "nullable": false, "default": null, "fk": null },
+        { "name": "EmployeeId", "type": "bigint", "nullable": false, "default": null, "fk": "HR_Employees.Id" }
+      ],
+      "indexes": ["PK_Id", "IX_EmployeeId"],
+      "rowSample": [{ "Id": 1, "EmployeeId": 100, "...": "..." }]
+    }
+  },
+  "relationships": [
+    { "from": "HR_EmployeeLeaves", "to": "HR_Employees", "type": "belongsTo", "fk": "EmployeeId", "confirmed": true }
+  ],
+  "lineage": [
+    {
+      "uiField": "employee.FullName",
+      "sourceTable": "HR_Employees",
+      "sourceColumn": "FullName",
+      "chain": ["employee", "FullName"],
+      "type": "fk_chain",
+      "confidence": "high",
+      "transforms": ["formatStateUsing: trim"],
+      "localeVariants": null
+    }
+  ],
+  "fieldMap": [
+    {
+      "dbColumn": "HR_EmployeeLeaves.StartDate",
+      "formField": { "component": "DatePicker", "required": true },
+      "tableColumn": { "component": "TextColumn", "sortable": true },
+      "exportColumn": "Column C"
+    }
+  ],
+  "dataFlow": [
+    {
+      "name": "Create Leave",
+      "steps": [
+        "User fills form in EmployeeLeavesResource::form()",
+        "Validation runs (date range, balance)",
+        "Model::create() inserts into HR_EmployeeLeaves",
+        "Observer creates transaction record"
+      ]
+    }
+  ],
+  "enums": {
+    "LeaveStatus": {
+      "file": "app/Enum/LeaveStatus.php",
+      "backedType": "int",
+      "cases": [
+        { "name": "Pending", "value": 0, "label": "معلق / Pending", "badgeColor": "warning" }
+      ]
+    }
+  },
+  "resources": {
+    "EmployeeLeavesResource": {
+      "file": "app/Filament/Resources/EmployeeLeavesResource.php",
+      "model": "HR_EmployeeLeaves",
+      "formFields": [{ "name": "EmployeeId", "component": "Select", "required": true, "live": true }],
+      "tableColumns": [{ "name": "employee.FullName", "component": "TextColumn", "sortable": true }],
+      "filters": [{ "name": "Status", "type": "SelectFilter", "options": "LeaveStatus" }],
+      "actions": [{ "name": "export-pdf", "type": "header", "permission": "ums:hr:employee-leaves:export" }],
+      "eagerLoading": ["employee", "leavePolicy.leaveType"],
+      "defaultSort": { "column": "CreationTime", "direction": "desc" },
+      "pagination": [10, 25, 50]
+    }
+  },
+  "observers": {
+    "HR_EmployeeLeavesObserver": {
+      "file": "app/Observers/HR_EmployeeLeavesObserver.php",
+      "events": [{ "event": "created", "sideEffect": "Creates transaction" }]
+    }
+  },
+  "jobs": {
+    "ExportEmployeeLeavesPdfJob": {
+      "file": "app/Jobs/ExportEmployeeLeavesPdfJob.php",
+      "queue": "default",
+      "constructorParams": ["filters", "userId"],
+      "output": "PDF",
+      "storagePath": "exports/leaves_{timestamp}.pdf",
+      "notification": "database",
+      "chunking": "chunkById(100)",
+      "errorHandling": "failed() sends error notification"
+    }
+  },
+  "imports": {},
+  "policies": {
+    "EmployeeLeavesPolicy": {
+      "file": "app/Policies/EmployeeLeavesPolicy.php",
+      "permissions": [
+        { "method": "viewAny", "permission": "ums:hr:employee-leaves:view" }
+      ]
+    }
+  },
+  "services": {
+    "OptimizedLeaveService": {
+      "file": "app/Services/Leave/OptimizedLeaveService.php",
+      "methods": [{ "name": "calculateBalance", "summary": "Computes remaining leave days for employee" }]
+    }
+  },
+  "helpers": {
+    "LeavesHelper": {
+      "file": "app/Helpers/LeavesHelper.php",
+      "methods": [{ "name": "getLeaveStatusBadge", "summary": "Returns badge color for leave status" }]
+    }
+  }
+}
+```
+
+### 8c: Generate HTML
+
+1. Read the HTML template file:
+   ```
+   .claude/templates/module-audit-template.html
+   ```
+
+2. Perform these replacements in the template:
+
+   | Placeholder | Replacement |
+   |-------------|-------------|
+   | `const AUDIT_DATA = {};` | `const AUDIT_DATA = {assembled JSON from 8b};` |
+   | `{{TITLE}}` | `{Module} Module Audit` (e.g., `Leave Module Audit`) |
+   | `{{DATE}}` | Current date in `YYYY-MM-DD` format |
+   | `{{DESCRIPTION}}` | Summary line: `{modelCount} models, {tableCount} tables, {resourceCount} resources, {jobCount} jobs` |
+
+3. Use the **Write** tool (not Edit) to create the HTML file, since the rendered file may exceed 100KB.
+
+### 8d: Save Files
+
+Create the output directory and save all files:
+
+```bash
+mkdir -p .claude/audits/{module}
+```
+
+Save three files:
+
+| File | Content |
+|------|---------|
+| `.claude/audits/{module}/audit-data.json` | Raw JSON from step 8b |
+| `.claude/audits/{module}/audit-meta.json` | Checksums + timestamp + branch for caching |
+| `.claude/audits/{module}/{module}-audit.html` | Rendered HTML from step 8c |
+
+The `audit-meta.json` format:
+```json
+{
+  "timestamp": "2026-03-31T14:30:00Z",
+  "branch": "feature/xyz",
+  "checksums": {
+    "app/Models/HR_EmployeeLeaves.php": "{md5}",
+    "app/Filament/Resources/EmployeeLeavesResource.php": "{md5}",
+    ...
+  }
+}
+```
+
+### 8e: Open in Browser
+
+After saving:
+
+```bash
+xdg-open .claude/audits/{module}/{module}-audit.html
+```
+
+Then tell the user:
+
+```
+HTML audit generated and opened in browser.
+
+Files saved:
+  - .claude/audits/{module}/{module}-audit.html (interactive report)
+  - .claude/audits/{module}/audit-data.json (raw data)
+  - .claude/audits/{module}/audit-meta.json (cache metadata)
+
+To regenerate: /audit {module} html fresh
+To view text version: /audit {module}
+```

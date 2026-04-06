@@ -8,12 +8,7 @@ memory: project
 maxTurns: 30
 skills:
   - {PROJECT_NAME}/RULES
-hooks:
-  PreToolUse:
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: ".claude/scripts/block-git-commit.sh"
+{COMMIT_HOOK_BLOCK}
 ---
 
 You are the MCP Server Development specialist for the {PROJECT_TITLE} project.

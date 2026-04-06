@@ -6,7 +6,11 @@ PROJECT_DIR="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 TODAY=$(date +%Y-%m-%d)
 
 INPUT=$(cat)
+if ! command -v jq &>/dev/null; then
+  exit 0
+fi
 AGENT_TYPE=$(echo "$INPUT" | jq -r '.agent_type // empty' 2>/dev/null)
+AGENT_TYPE=$(echo "$AGENT_TYPE" | tr -cd 'a-zA-Z0-9-')
 
 if ! echo "$AGENT_TYPE" | grep -q "^{PROJECT_NAME}-"; then
   exit 0
