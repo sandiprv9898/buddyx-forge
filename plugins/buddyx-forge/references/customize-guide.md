@@ -1,189 +1,101 @@
-# AI Customization Guide
+# Customization Guide
 
-Read this during Step 5 of /buddyx-forge setup. You (Claude) fill in files that need intelligence.
+After running `/buddyx-forge:setup`, the Python generator creates all files with sensible defaults. This guide covers optional enhancements you can make to tailor the setup to your specific codebase.
+
+## When to Use This Guide
+
+- After initial setup, when you want to refine agent behavior
+- After `/buddyx-forge:scan` populates file lists and you want to adjust ownership
+- When adding project-specific rules beyond framework defaults
 
 ## CONSTRAINTS
 
 - Only read 3-5 files per domain to detect patterns. Do NOT read entire codebase.
 - Each agent.md must stay under 150 lines total.
 - Only include rules you can VERIFY from actual code. NEVER invent patterns.
-- If project is empty (no code yet), use Laravel defaults and add placeholders.
+- If project is empty (no code yet), use framework defaults and add placeholders.
 
-## File 1: CLAUDE.md
+## 1. Refine Agent File Ownership
 
-The Python generator created `.claude/CLAUDE.md` from template with placeholders. Use Edit tool to fill:
+After `/buddyx-forge:scan` populates `## Your Files` sections in each agent, review and adjust:
 
-### {AGENT_DELEGATION_TABLE}
-Build a table from the project's agents:
+- Move files between domains if scan assigned them incorrectly
+- Add `# manual` comment to entries you don't want scan to override:
+  ```
+  app/Services/PaymentGateway.php  # manual
+  ```
+- Mark cross-domain dependencies under `### Read Only`
 
-```markdown
-| When To Use | Agent |
-|-------------|-------|
-| Unknown domain/feature | {name}-discovery |
-| Check DB schema | {name}-db |
-| After any code change | {name}-review (auto) |
-| Multi-domain task | {name}-team-lead |
-| Refresh context files | {name}-maintenance |
-| {domain1} tasks | {name}-{domain1} |
-| {domain2} tasks | {name}-{domain2} |
-```
+## 2. Add Domain-Specific Constraints
 
-### {PROMPT_TEMPLATES_SECTION}
-If user chose Q8=Yes, generate:
+Each domain agent has a `## Domain-Specific Constraints` section. Add rules specific to that domain:
 
 ```markdown
-## How to Write Prompts
-
-### Format
-[action]: [file/location] — [what's wrong or what to do]. [scope limit].
-
-### Actions
-| Action | Meaning |
-|--------|---------|
-| `fix:` | Something is broken |
-| `add:` | New feature |
-| `refactor:` | Improve without changing behavior |
-| `check:` / `audit:` | Review and report |
-| `update:` | Change existing behavior |
-| `optimize:` | Improve performance |
-
-### Examples
-{Generate 3-5 examples using actual domain names and likely file patterns from the codebase}
-
-### Modifiers
-- `only touch [file]` — limits scope
-- `don't modify [file]` — excludes a file
-- `show me before changing` — preview first
-- `read only` — just analyze
-
-### If My Prompt Is Missing Something, Ask Me:
-| Missing Part | Ask |
-|---|---|
-| No file/location | "Which file or module should I look at?" |
-| No clear problem | "What's the current behavior vs expected behavior?" |
-| No scope limit | "Should I only touch [file], or can I change related files too?" |
-| Ambiguous action | "Do you want me to fix the bug, or refactor the approach?" |
-| No reference | "Is there a working example I should match?" |
+## Domain-Specific Constraints
+- All billing amounts use integer cents (never float dollars)
+- InvoiceService is the single entry point for all invoice operations
+- Stripe webhook handlers must be idempotent
 ```
 
-### {FLOWS_AND_DIAGRAMS_SECTION}
-```markdown
-## Flows & Diagrams
+Base these on actual code patterns — read 2-3 files in the domain first.
 
-**"create flow"** → simple markdown .md file with step arrows
-  - Save to `.claude/docs/{feature}/flows.md`
+## 3. Customize RULES.md
 
-**"diagram:"** → visual interactive HTML (Mermaid, zoom/pan)
-  - Types: ER, flowchart, sequence, architecture, state
-
-**On demand only:** Only create flows/diagrams when user explicitly asks.
-```
-
-## File 2: RULES.md
-
-Create `.claude/skills/{name}/RULES.md` with 3 tiers.
-
-### Tier 1: Universal (always include)
-Read `references/framework-{detected_framework}.md` for the framework-specific rules.
-
-### Tier 2: Detected Conventions
-Read 3-5 existing model files. Use these commands to detect each convention:
-
-**Table naming:**
-```bash
-grep -r 'protected \$table' app/Models/*.php | head -3
-```
-If results show `'HR_Employees'` → PascalCase. If `'users'` → snake_case. If missing → standard Laravel (snake_case).
-
-**Primary key:**
-```bash
-grep -r 'protected \$primaryKey' app/Models/*.php | head -3
-```
-If `'EmployeeId'` → descriptive PascalCase. If missing → standard `id`.
-
-**Timestamps:**
-```bash
-grep -r "CREATED_AT\|UPDATED_AT\|DELETED_AT" app/Models/*.php | head -5
-```
-If `UPDATED_AT = 'ModifiedDateTime'` → custom. If missing → standard `created_at`/`updated_at`.
-
-**Soft deletes:**
-```bash
-grep -r "DELETED_AT\|SoftDeletes" app/Models/*.php | head -3
-```
-If `DELETED_AT = 'DeletionTime'` → custom. If just `SoftDeletes` → standard `deleted_at`.
-
-**Enum folder:**
-```bash
-ls -d app/Enum/ app/Enums/ 2>/dev/null
-```
-
-**Import ordering:**
-Read top 20 lines of 3 model files. Detect grouping pattern.
-
-Write detected patterns:
-```markdown
-## Detected Conventions (from codebase scan)
-- Table names: {pattern} (from {file})
-- Primary keys: {pattern}
-- Timestamps: {pattern}
-- Soft deletes: {column name}
-- Enum folder: {path}
-```
-
-If no code exists → skip Tier 2: `<!-- Run /buddyx-forge:scan after adding code to detect conventions -->`
-
-### Tier 3: User-Provided
-From setup answers:
-- If Q5 = "User commits" → "NEVER commit code. User commits manually."
-- If Q4 = shared DB → "NEVER create migrations in this project."
-- If Filament detected → add Filament form/table rules
-
-## File 3: Agent "Your Files" Sections
-
-For each domain agent `.claude/agents/{name}-{domain}.md`:
-
-1. Scan the project's source directories for files relevant to each domain
-2. Use the discovery commands from the agent's instructions to find matching files
-3. Use Edit tool to replace placeholder in `## Your Files` section
-
-If no files found → leave placeholder: `<!-- No files detected yet. Run /buddyx-forge:scan after adding code. -->`
-
-## File 4: domain-map.md
-
-Replace skeleton sections with actual file lists:
+The generator creates framework-specific rules. Add project-specific conventions under `## Detected Conventions`:
 
 ```markdown
-## {domain}
-
-### Read/Write
-- app/Models/User.php
-- app/Filament/Resources/UserResource.php
-- app/Policies/UserPolicy.php
-
-### Read Only
-- app/Helpers/AuthHelper.php (used but owned by another domain)
+## Detected Conventions
+- Tables use `uuid` primary keys (not auto-increment)
+- All models use soft deletes (`deleted_at` column)
+- Enums stored in `app/Enums/` with `string` backing type
+- Timestamps: `created_at`, `updated_at` on every table
 ```
 
-If no code → keep skeleton placeholders.
+Run `/buddyx-forge:scan` to auto-detect these, or add manually after reading your schema.
 
-## File 5: database-tables.md
+## 4. Tune Orchestrator Keywords
 
-**If MCP `database-schema` is available:**
-1. For each model, extract table name from `protected $table` or derive from class name
-2. Query: `mcp__laravel-boost__database-schema(filter: "{table_name}", include_column_details: true)`
-3. Write structured output per table:
+The orchestrator in `skills/{name}/SKILL.md` routes tasks to agents based on keywords. If agents get wrong assignments, edit the keywords table:
+
 ```markdown
-## {TableName}
-| Column | Type | Nullable | Default | FK |
-|--------|------|----------|---------|-----|
+| Domain | Keywords |
+|--------|----------|
+| billing | invoice, payment, subscription, stripe, refund, credit |
+| auth | login, token, session, password, 2fa, oauth |
 ```
 
-**If MCP not available (fallback):**
-1. Read each model's `$fillable` array for column names
-2. Read `$casts` for type information
-3. Read relationship methods for FK inference
-4. Write best-effort schema (mark as "from model, not verified against DB")
+Add domain-specific terms that appear in your codebase but aren't in the defaults.
 
-**If no code exists:**
-Keep skeleton: `<!-- Populated by /buddyx-forge:scan -->`
+## 5. Add Shared Learnings
+
+If you already know project conventions, seed `agent-memory/shared-learnings.md`:
+
+```markdown
+## Patterns
+
+[CONFIRMED] [2026-04-01] Always use `->lockForUpdate()` when modifying balance fields
+[CONFIRMED] [2026-04-01] Filament forms: use `->reactive()` on fields that trigger other field visibility
+[NEW 0/3] [2026-04-01] Consider using `->batch()` for bulk notification sends
+```
+
+Mark established conventions as `[CONFIRMED]` and hypotheses as `[NEW 0/3]`.
+
+## 6. Adjust Permission Level
+
+If the generated `settings.json` is too restrictive or too loose, edit the `permissions` section directly. The generator creates three tiers:
+
+- `allow` — runs without asking
+- `ask` — prompts for confirmation
+- `deny` — blocked entirely
+
+Add project-specific commands as needed:
+```json
+"allow": ["Bash(php artisan queue:work --once)"],
+"ask": ["Bash(php artisan migrate *)"]
+```
+
+## What NOT to Customize
+
+- Don't edit hook scripts directly — they're regenerated on setup. Instead, disable by renaming to `.disabled`
+- Don't change agent frontmatter `name:` fields — the orchestrator and memory system depend on these
+- Don't remove `skills:` references from agents — they load RULES.md at runtime

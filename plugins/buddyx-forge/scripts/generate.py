@@ -1115,12 +1115,7 @@ find src/services -name "*.ts" -o -name "*.js" 2>/dev/null | sort""",
 
     # Framework-specific hookify rules
     hookify_rules_map = {
-        "laravel": """## Rule: Block migrations in this project
-- trigger: Write or Edit to `database/migrations/` or `database/seeders/`
-- action: block
-- message: "Migrations must be created in the admin project, not here."
-
-## Rule: No $guarded = []
+        "laravel": """## Rule: No $guarded = []
 - trigger: Write or Edit containing `$guarded = []`
 - action: block
 - message: "Use $fillable instead of $guarded = []. Security requirement."
@@ -1214,7 +1209,10 @@ find src/services -name "*.ts" -o -name "*.js" 2>/dev/null | sort""",
         "DISCOVERY_COMMANDS": discovery_commands_map.get(framework, discovery_commands_map["laravel"]),
         "DB_TOOLS": db_tools_map.get(framework, db_tools_map["laravel"]),
         "MAINTENANCE_COMMANDS": maintenance_commands_map.get(framework, maintenance_commands_map["laravel"]),
-        "FRAMEWORK_HOOKIFY_RULES": hookify_rules_map.get(framework, hookify_rules_map.get("laravel", "")),
+        "FRAMEWORK_HOOKIFY_RULES": (
+            ('## Rule: Block migrations in this project\n- trigger: Write or Edit to `database/migrations/` or `database/seeders/`\n- action: block\n- message: "Migrations must be created in the shared database project, not here."\n\n' if config.get("sharedDb") else '')
+            + hookify_rules_map.get(framework, hookify_rules_map.get("laravel", ""))
+        ),
         "MEMORY_INSTRUCTIONS_DOMAIN": memory_instructions_domain,
         "MEMORY_INSTRUCTIONS_INFRA": memory_instructions_infra,
         "MEMORY_WRITE_DOMAIN": memory_write_domain,
@@ -1358,7 +1356,7 @@ find src/services -name "*.ts" -o -name "*.js" 2>/dev/null | sort""",
     # 11. RULES.md (complete — framework-specific, no AI needed, Option B)
     write_file(output_dir, f"skills/{name}/RULES.md", build_rules_md(config), dry_run)
 
-    # 11. Diagram skill
+    # 12. Diagram skill
     diagram_content = render_template("diagram-skill.tmpl", {
         **common,
         "EXAMPLE_DOMAIN": domains[0] if domains else "example",

@@ -266,6 +266,67 @@ finally:
     shutil.rmtree(outdir, ignore_errors=True)
 
 
+# === Hookify Migration Rule ===
+print("\n=== Hookify Migration Rule ===")
+
+# Without sharedDb — should NOT block migrations
+outdir = tempfile.mkdtemp()
+try:
+    cfg = make_config({"sharedDb": None})
+    generate(cfg, os.path.join(outdir, ".claude"))
+    hookify_path = os.path.join(outdir, ".claude", "hookify-rules.md")
+    hookify_content = open(hookify_path).read()
+    test("no sharedDb → no migration block in hookify", "Block migrations" not in hookify_content)
+finally:
+    shutil.rmtree(outdir, ignore_errors=True)
+
+# With sharedDb — SHOULD block migrations
+outdir = tempfile.mkdtemp()
+try:
+    cfg = make_config({"sharedDb": "/other/project"})
+    generate(cfg, os.path.join(outdir, ".claude"))
+    hookify_path = os.path.join(outdir, ".claude", "hookify-rules.md")
+    hookify_content = open(hookify_path).read()
+    test("sharedDb set → migration block in hookify", "Block migrations" in hookify_content)
+finally:
+    shutil.rmtree(outdir, ignore_errors=True)
+
+
+# === Version Stamp ===
+print("\n=== Version Stamp ===")
+
+outdir = tempfile.mkdtemp()
+try:
+    cfg = make_config()
+    generate(cfg, os.path.join(outdir, ".claude"))
+    with open(os.path.join(outdir, ".claude", "settings.json")) as f:
+        settings = json.load(f)
+    test("settings.json has buddyxForgeVersion", "buddyxForgeVersion" in settings)
+    test("version is 1.1.0", settings.get("buddyxForgeVersion") == "1.1.0")
+finally:
+    shutil.rmtree(outdir, ignore_errors=True)
+
+
+# === SharedDb Path Validation ===
+print("\n=== SharedDb Path Validation ===")
+
+try:
+    cfg = make_config({"sharedDb": "/path; rm -rf /"})
+    cfg_path = write_config(cfg)
+    load_config(cfg_path)
+    test("dangerous sharedDb path rejected", False)
+except ValueError:
+    test("dangerous sharedDb path rejected", True)
+
+try:
+    cfg = make_config({"sharedDb": "../other-project"})
+    cfg_path = write_config(cfg)
+    load_config(cfg_path)
+    test("valid sharedDb path accepted", True)
+except ValueError:
+    test("valid sharedDb path accepted", False)
+
+
 # ─── Summary ───
 
 print(f"\n{'='*50}")
