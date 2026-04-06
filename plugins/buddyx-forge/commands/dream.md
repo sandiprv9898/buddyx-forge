@@ -7,7 +7,18 @@ description: Memory consolidation — clean stale entries, merge duplicates, pro
 
 Memory consolidation for the agent system. Like sleep for your agents.
 
+## Flags
+
+- `--dry-run` — show what would be cleaned without making changes. Report all actions as "WOULD trim", "WOULD remove", etc.
+
 ## Process
+
+### Step 0: Check for --dry-run
+
+Parse the user's command for `--dry-run` flag. If present, set `DRY_RUN=true`. In dry-run mode:
+- Perform all analysis (count lines, find stale entries)
+- Report what WOULD change (with "WOULD" prefix)
+- Do NOT modify any files
 
 ### Step 1: Detect Project
 
@@ -64,7 +75,7 @@ Read `.claude/dashboard/events.jsonl` (if exists):
 ### Step 7: Report
 
 ```
-buddyx-forge dream complete:
+buddyx-forge dream {DRY RUN — no changes made | complete}:
 
 Agent Memories:
   {agent1}: OK (45 lines)

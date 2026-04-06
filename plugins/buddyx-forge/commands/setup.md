@@ -100,7 +100,10 @@ After all 10 questions, build the config JSON. Include:
 - MCP servers detected
 - Worktree symlink directories (auto-detected: Laravel → `["vendor", "node_modules"]`)
 
-Write to `/tmp/buddyx-forge-config.json`.
+Write to a temporary file using `mktemp`:
+```bash
+CONFIG_FILE=$(mktemp /tmp/buddyx-forge-XXXXXX.json)
+```
 
 Config schema (all fields required):
 ```json
@@ -148,13 +151,13 @@ GENERATOR=$(find ~/.claude/plugins -path '*/buddyx-forge/*/scripts/generate.py' 
 
 If `--dry-run`:
 ```bash
-python3 "$GENERATOR" --config /tmp/buddyx-forge-config.json --output .claude/ --dry-run
+python3 "$GENERATOR" --config "$CONFIG_FILE" --output .claude/ --dry-run
 ```
 Show output to user. Ask "Looks good? Run for real?" If yes, run without --dry-run.
 
 Run the generator:
 ```bash
-python3 "$GENERATOR" --config /tmp/buddyx-forge-config.json --output .claude/
+python3 "$GENERATOR" --config "$CONFIG_FILE" --output .claude/
 ```
 
 **The generator creates EVERYTHING:** CLAUDE.md, AGENTS.md, settings.json, all agents, all scripts, all skills, all memory files, hookify rules, dashboard template. No manual file creation needed.
