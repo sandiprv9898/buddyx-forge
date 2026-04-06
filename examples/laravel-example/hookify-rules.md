@@ -8,11 +8,6 @@
 - action: block
 - message: "Git commits are manual. Use /commit when ready."
 
-## Rule: Block migrations in this project
-- trigger: Write or Edit to `database/migrations/` or `database/seeders/`
-- action: block
-- message: "Migrations must be created in the admin project, not here."
-
 ## Rule: No $guarded = []
 - trigger: Write or Edit containing `$guarded = []`
 - action: block

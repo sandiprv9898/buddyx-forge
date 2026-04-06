@@ -1363,7 +1363,7 @@ find src/services -name "*.ts" -o -name "*.js" 2>/dev/null | sort""",
     })
     write_file(output_dir, f"skills/{name}/diagram/SKILL.md", diagram_content, dry_run)
 
-    # 12. Audit skill
+    # 13. Audit skill
     domain_list_md = "\n".join([f"| `{d}` | {d.replace('-', ' ').title()} |" for d in domains])
     audit_content = render_template("audit-skill.tmpl", {
         **common,
@@ -1371,23 +1371,23 @@ find src/services -name "*.ts" -o -name "*.js" 2>/dev/null | sort""",
     })
     write_file(output_dir, f"skills/{name}/audit/SKILL.md", audit_content, dry_run)
 
-    # 13. Audit HTML template (copy as-is)
+    # 14. Audit HTML template (copy as-is)
     audit_html_src = TEMPLATES_DIR / "module-audit-template.html"
     if audit_html_src.exists():
         content = audit_html_src.read_text()
         write_file(output_dir, "templates/module-audit-template.html", content, dry_run)
 
-    # 14. Output directories
+    # 15. Output directories
     write_file(output_dir, "diagrams/.gitkeep", "", dry_run)
     write_file(output_dir, "audits/.gitkeep", "", dry_run)
 
-    # 15. Dashboard HTML template (V2.1)
+    # 16. Dashboard HTML template (V2.1)
     dash_src = TEMPLATES_DIR / "dashboard.html.tmpl"
     if dash_src.exists():
         content = dash_src.read_text().replace("{PROJECT_TITLE}", title)
         write_file(output_dir, "dashboard/dashboard-template.html", content, dry_run)
 
-    # 16. Hookify rules (V2.1)
+    # 17. Hookify rules (V2.1)
     hookify_content = render_template("hookify-rules.tmpl", common)
     write_file(output_dir, "hookify-rules.md", hookify_content, dry_run)
 

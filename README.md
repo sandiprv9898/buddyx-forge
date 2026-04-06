@@ -178,7 +178,7 @@ Run the built-in test suite:
 python3 tests/test_generator.py
 ```
 
-36 tests covering: config validation, all 7 frameworks, optional agents, memory flags, framework-aware permissions.
+47 tests covering: config validation, all 7 frameworks, optional agents, memory flags, framework-aware permissions, enum validation, conservative permissions, hookify migration rules, version stamp, sharedDb path validation.
 
 ## Requirements
 
