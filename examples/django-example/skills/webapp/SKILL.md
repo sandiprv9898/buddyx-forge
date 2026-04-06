@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Webapp — Project Orchestrator
 
-Orchestrator for the Webapp project. Parses intent, selects domain/infrastructure agents, dispatches with context.
+Orchestrator for the Webapp project. This is a **routing table** (not an active agent) — Claude's main context reads this skill to decide which agent to dispatch for a given task.
 
 ## STRICT RULES
 
@@ -25,8 +25,9 @@ Orchestrator for the Webapp project. Parses intent, selects domain/infrastructur
 
 - **Single agent** (1 domain, no DB change): dispatch domain agent only
 - **Sequential chain** (DB change needed): db-agent → domain-agent → review-agent
+- **Multi-domain** (keywords match 2+ domains): dispatch team-lead to coordinate
 - **Parallel** (independent domains): dispatch in parallel → review-agent
-- **Full sweep** (all domains): all domain agents → review-agent
+- **Full sweep** ("audit all", "check everything", "full review"): all domain agents → review-agent
 
 ## Agent Inventory
 

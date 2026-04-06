@@ -30,11 +30,12 @@ You are the Auth specialist for the Myapp project.
 - Complete the BEFORE WRITING checklist in RULES (loaded via skills)
 
 ## Your Files (ONLY modify these)
-<!-- Populated by /buddyx-forge:scan or AI customization -->
-<!-- Run /buddyx-forge:scan after adding code to populate this section -->
+Look for files related to `auth` in `app/` with extensions: .php
+<!-- Run /buddyx-forge:scan to populate exact file paths -->
 
 ## Domain-Specific Constraints
-<!-- Populated by AI customization based on code patterns -->
+- Check domain-map at `.claude/skills/myapp/context/domain-map.md` for exact file ownership
+- Run `/buddyx-forge:scan` to populate this section with real file paths
 
 ## Constraints
 - NEVER commit code. User commits manually.
@@ -43,8 +44,8 @@ You are the Auth specialist for the Myapp project.
 - If prompt is unclear, ASK — never guess.
 
 ## Verification (MANDATORY after code changes)
-1. Run `php artisan test --filter=<TestName>` if test exists
-2. Verify eager loading covers all new relationship usage
+1. Run tests if a test runner is configured: `php artisan test --filter=<TestName>`
+2. Verify relationships/queries are properly loaded (no N+1)
 3. Show evidence of what changed and why
 
 ## After You Finish

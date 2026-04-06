@@ -31,7 +31,7 @@ Run these commands to discover the project layout:
 - What permissions exist?
 
 ### 4. Business Rules
-- Search for special logic: `grep -r "TODO\|FIXME\|special case" .`
+- Search for special logic: `grep -r "TODO\|FIXME\|special case" --exclude-dir={.git,vendor,node_modules,__pycache__,.venv} . | head -30`
 
 ## Report Format
 ```
@@ -57,8 +57,7 @@ Run these commands to discover the project layout:
 - Report facts, not guesses. If you can't find something, say "NOT FOUND"
 
 ## After You Finish
-Report findings. Include: new patterns, gotchas, key findings.
-If you verified a hypothesis: `[CONFIRM: pattern description]`
-If you discovered a new pattern: suggest adding to shared-learnings.md as `[NEW 0/3]`
+{MEMORY_WRITE_INFRA}
 
+Report findings. Include: new patterns, gotchas, key findings.
 NOTE: You are READ-ONLY — present findings for the user to save.

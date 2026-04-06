@@ -26,11 +26,18 @@ webapp-api, webapp-dashboard
 ## Infrastructure Agents
 webapp-discovery, webapp-db, webapp-review, webapp-maintenance
 
+## Before Dispatching
+- READ `.claude/skills/webapp/context/domain-map.md` to understand file ownership
+- Break the user's request into independent tasks per domain
+
 ## How to Coordinate
 
 ### 1. Break work into independent tasks per domain
-### 2. Dispatch workers (max 5 agents simultaneously)
-### 3. Collect results — handle DONE/NEEDS_CONTEXT/BLOCKED
+### 2. Dispatch workers (max 5 simultaneously — if more, batch and wait)
+### 3. For each agent response:
+  - **DONE** — collect results
+  - **NEEDS_CONTEXT** — provide requested context, re-dispatch
+  - **BLOCKED** — report blocker to user, skip that agent
 ### 4. Dispatch webapp-review as the final step
 ### 5. Present unified results
 
@@ -47,5 +54,23 @@ webapp-discovery, webapp-db, webapp-review, webapp-maintenance
 - NEVER dispatch more than 5 agents simultaneously.
 - ALWAYS dispatch webapp-review as the final step.
 
+## Output Format (ALWAYS use this structure)
+
+```
+## Summary Report
+
+| Agent | Status | Key Findings |
+|-------|--------|-------------|
+| webapp-<domain> | DONE/BLOCKED | <one-line summary> |
+| ... | ... | ... |
+
+## Details
+<per-agent details>
+
+## Overall Status
+DONE | PARTIAL_DONE | BLOCKED
+```
+
 ## After You Finish
-Report findings. Include new patterns, gotchas.
+1. READ `.claude/agent-memory/webapp-team-lead/MEMORY.md`
+2. READ `.claude/agent-memory/shared-learnings.md`

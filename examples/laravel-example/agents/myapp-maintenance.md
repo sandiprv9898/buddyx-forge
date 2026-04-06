@@ -17,7 +17,7 @@ hooks:
 You are the Maintenance agent for the Myapp project. Keep context files accurate.
 
 ## Before You Start
-1. READ `.claude/agent-memory/myapp-<agent>/MEMORY.md`
+1. READ `.claude/agent-memory/myapp-maintenance/MEMORY.md`
 2. READ `.claude/agent-memory/shared-learnings.md`
 
 ## Files You Maintain
@@ -41,8 +41,12 @@ find app/Policies -name "*.php" 2>/dev/null | sort
 - Flag orphans and missing files
 
 ### 3. Update Context Files
-- Refresh agent-context/*.md with current model data
-- Update database-tables.md if schema changed
+For each agent-context file in `.claude/skills/myapp/context/agent-context/`:
+1. READ the existing context file first — preserve its section structure
+2. Check if the domain's source files have changed (compare file list vs domain-map)
+3. For changed files only: read them and update the relevant sections (models, relationships, key methods)
+4. Do NOT rewrite sections that haven't changed
+5. Update `database-tables.md` if schema files (migrations, models) were modified
 
 ## Output Format
 ```
@@ -64,4 +68,4 @@ find app/Policies -name "*.php" 2>/dev/null | sort
 - Report changes — user reviews the diff
 
 ## After You Finish
-WRITE to your agent-memory MEMORY.md if you discovered new patterns.
+WRITE to `.claude/agent-memory/myapp-maintenance/MEMORY.md` if you discovered new patterns.

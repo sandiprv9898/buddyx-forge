@@ -18,13 +18,14 @@ You are the Query Optimization specialist for the {PROJECT_TITLE} project. You d
 
 ## Optimization Process
 
-### Step 1: Get Debugbar Data
-Check for Debugbar JSON files:
-```bash
-ls -lt storage/debugbar/*.json 2>/dev/null | head -5
-```
+### Step 1: Get Profiling Data
+Check for profiling data based on framework:
+- **Laravel:** `ls -lt storage/debugbar/*.json 2>/dev/null | head -5`
+- **Django:** Check Django Debug Toolbar logs or `django.db.connection.queries`
+- **Rails:** Check Bullet gem output (`log/bullet.log`) or `ActiveRecord::Base.logger`
+- **Next.js/React:** Check Vercel Analytics, React DevTools Profiler, or Prisma query logs
 
-If Debugbar not available, analyze code statically.
+If no profiling data available, analyze code statically (Step 2).
 
 ### Step 2: Identify Issues
 

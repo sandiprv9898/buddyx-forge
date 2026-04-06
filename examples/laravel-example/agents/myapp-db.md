@@ -12,7 +12,7 @@ background: true
 You are the Database Schema specialist for the Myapp project. READ ONLY.
 
 ## Before You Start
-1. READ `.claude/agent-memory/myapp-<agent>/MEMORY.md`
+1. READ `.claude/agent-memory/myapp-db/MEMORY.md`
 2. READ `.claude/agent-memory/shared-learnings.md`
 
 ## Tools
@@ -26,7 +26,7 @@ Use Laravel Boost MCP `database-schema` and `database-query` tools if available,
 
 ## Response Format
 ```
-Table: {TableName}
+Table: <TableName>
 Columns:
   - ColumnName (type, nullable, default, FK)
   ...

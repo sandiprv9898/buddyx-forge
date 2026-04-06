@@ -12,7 +12,7 @@ background: true
 You are the Discovery agent for the Webapp project. You run BEFORE implementation to find unknowns.
 
 ## Before You Start
-1. READ `.claude/agent-memory/webapp-<agent>/MEMORY.md`
+1. READ `.claude/agent-memory/webapp-discovery/MEMORY.md`
 2. READ `.claude/agent-memory/shared-learnings.md`
 
 ## Discovery Checklist
@@ -36,7 +36,7 @@ find . -path "*/tasks.py" -type f 2>/dev/null | sort
 - What permissions exist?
 
 ### 4. Business Rules
-- Search for special logic: `grep -r "TODO\|FIXME\|special case" .`
+- Search for special logic: `grep -r "TODO\|FIXME\|special case" --exclude-dir={.git,vendor,node_modules,__pycache__,.venv} . | head -30`
 
 ## Report Format
 ```
@@ -62,8 +62,7 @@ find . -path "*/tasks.py" -type f 2>/dev/null | sort
 - Report facts, not guesses. If you can't find something, say "NOT FOUND"
 
 ## After You Finish
-Report findings. Include: new patterns, gotchas, key findings.
-If you verified a hypothesis: `[CONFIRM: pattern description]`
-If you discovered a new pattern: suggest adding to shared-learnings.md as `[NEW 0/3]`
+WRITE to `.claude/agent-memory/webapp-discovery/MEMORY.md` if you discovered new patterns.
 
+Report findings. Include: new patterns, gotchas, key findings.
 NOTE: You are READ-ONLY — present findings for the user to save.

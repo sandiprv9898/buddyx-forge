@@ -74,10 +74,10 @@ Under that section, extract two groups:
 
 ### 2c: Expand Glob Patterns
 
-Some entries contain glob patterns (e.g., `app/Filament/Resources/EmployeeLeavesResource/**/*.php`). Expand each using the Glob tool:
+Some entries contain glob patterns. Expand each using the Glob tool:
 
 ```
-Glob pattern: "app/Filament/Resources/EmployeeLeavesResource/**/*.php"
+Glob pattern: "**/*<module>*"
 ```
 
 Replace the glob entry with the resolved list of actual file paths.
@@ -130,29 +130,28 @@ The file is structured Markdown containing:
 | Section | Format | Contains |
 |---------|--------|----------|
 | Table Schemas | `\| Column \| Type \| Notes \|` tables | DB column names, types, nullable, defaults |
-| Model Snippets | PHP code blocks | `$fillable`, `$casts`, relationship methods, traits |
-| Resource Snippets | PHP code blocks | Form schema fields, table column definitions |
+| Model/Schema Snippets | Code blocks | Model definitions, field lists, relationship methods |
+| UI/Route Snippets | Code blocks | Form fields, table columns, route handlers, views |
 
 ### 3c: Extract Key Data
 
 From the context file, extract and store:
 
-- **Model list** — all model class names found
+- **Model/entity list** — all model or entity class names found
 - **Table schemas** — column/type/nullable for each table
-- **Relationships** — belongsTo, hasMany, morphTo, etc. with related model names
-- **Fillable columns** — from each model's `$fillable` array
-- **Casts** — from each model's `$casts` array (especially enum casts)
-- **Traits** — all `use TraitName;` statements in each model
-- **Resource fields** — form fields and table columns from resource snippets
+- **Relationships** — foreign keys, associations, references between models
+- **Field definitions** — declared fields, fillable attributes, or schema definitions
+- **Type mappings** — enums, casts, custom types
+- **Traits/mixins** — reusable behaviors mixed into models
+- **UI definitions** — form fields, table columns, view components
 
-### 3d: Fallback on Script Failure
+### 3d: Fallback
 
-If the script fails (non-zero exit code or missing output file):
+If the context file is empty or missing:
 
-1. Add a warning: `"WARNING: Context extraction script failed. Falling back to direct file parsing."`
-2. Read each model file from the Step 2 file list directly
-3. Parse `$fillable`, `$casts`, relationships, and traits manually using string matching
-4. Continue to Step 4 — do NOT stop the audit
+1. Read each source file from the Step 2 file list directly
+2. Parse field definitions, relationships, and types using string matching
+3. Continue to Step 4 — do NOT stop the audit
 
 ---
 
@@ -191,47 +190,21 @@ If database tools fail or are unavailable:
 
 ## Step 5: Deep File Parse
 
-Read the actual PHP files to extract details the context script does not cover.
+Read the actual source files to extract details beyond the context pack.
 
-### 5a: Model Files
+### 5a: Model/Entity Files
 
-For each model file in the file list:
+For each model or entity file in the file list, extract:
 
-**Observers** — Find PHP 8 attributes:
-```php
-#[ObservedBy(ClassName::class)]
-```
-Record the observer class name. Read the observer file if it exists in the file list.
+- **Lifecycle hooks** — callbacks, signals, observers, middleware that fire on create/update/delete
+- **Scopes/Filters** — named query scopes, manager methods, custom querysets
+- **Computed properties** — accessors, getters, virtual fields, derived attributes
+- **Event handlers** — side effects triggered by model state changes
+- **Enums/Constants** — status types, role types, category enums. For each: extract possible values and any display labels
 
-**Scopes** — Find PHP 8 attributes and scope methods:
-```php
-#[ScopedBy(ClassName::class)]
-// and
-public function scopeActive($query) { ... }
-```
+### 5b: UI/Route Files
 
-**Accessors** — Find accessor methods:
-```php
-public function getFullNameAttribute() { ... }
-```
-Record: method name, return type (if declared), one-line summary of the logic.
-
-**Boot events** — Find lifecycle hooks inside `booted()` or `boot()`:
-```php
-static::created(function ($model) { ... });
-static::updated(function ($model) { ... });
-static::deleted(function ($model) { ... });
-```
-Record: event name, one-line summary of side effects.
-
-**Enums from casts** — For each enum in the model's `$casts` array:
-1. Resolve the enum class path (e.g., `'Status' => LeaveStatus::class` points to `app/Enum/LeaveStatus.php`)
-2. Read the enum file
-3. Extract: backed type (string/int), case names, case values, any methods (`label()`, `badgeColor()`, `icon()`)
-
-### 5b: Resource Files
-
-For each resource file (`*Resource.php`) and its page files:
+For each UI component, resource, view, or route handler file:
 
 **Form fields** — Parse the `form()` method. For each field extract:
 
@@ -287,31 +260,22 @@ List all eager-loaded relationships with their column selections.
 
 **Search** — Find columns with `->searchable()`, note any custom search scopes
 
-### 5c: Employer Embedded Pages
+### 5c: Background Jobs / Tasks / Workers
 
-For each file in `app/Filament/Resources/EmployerResource/Pages/` that belongs to this module:
-
-Apply the same extraction as 5b, but also note:
-- This is an embedded page (shown inside the Employer resource, not standalone)
-- It may have different eager loading than the standalone resource
-- It may omit the employee column (since the employee context is already known)
-
-### 5d: Job Files
-
-For each job file:
+For each job, task, or worker file:
 
 | Property | What to extract |
 |----------|----------------|
-| Queue traits | `ShouldQueue`, `InteractsWithQueue`, `Queueable`, `SerializesModels` |
-| Constructor params | Parameter names and types |
-| handle() method | Query logic, eager loading, output format (PDF/Excel), storage path, notification sent |
-| failed() method | Error handling and notification on failure |
-| Filter support | Whether the job accepts filters (date range, status, etc.) |
-| Chunking | `chunk()`, `chunkById()`, `cursor()` usage |
+| Trigger | How is this job dispatched? (queue, cron, event, manual) |
+| Input | Parameters or payload the job receives |
+| Processing | What does it do? (query, transform, export, notify) |
+| Output | What does it produce? (file, notification, DB update) |
+| Error handling | Retry logic, failure notifications |
+| Performance | Batch/chunk processing, pagination |
 
-### 5e: Policy Files
+### 5d: Policy / Permission Files
 
-For each policy file:
+For each policy or permission file:
 
 Extract method names and the permission string they check. Pattern is typically:
 ```php
@@ -420,6 +384,8 @@ For each field, also record any display transforms applied:
 
 When the `html` flag is NOT set, output the audit as structured text directly in the conversation. Include all 11 sections below.
 
+> **Note:** The examples below use Laravel/PHP naming conventions for illustration. Adapt column names, file paths, and terminology to match the actual project's framework and codebase.
+
 ### Section 1: Summary
 
 ```
@@ -526,35 +492,29 @@ Backed type: int
 ### Section 8: Resources
 
 ```
-## Resources
+## UI Components / Routes
 
-### EmployeeLeavesResource
+### <ModuleName> Views
 
-**Form Fields:**
-| Field | Component | Required | Live | Validation |
-|-------|-----------|----------|------|------------|
-| EmployeeId | Select | Yes | Yes | exists:HR_Employees,Id |
-| StartDate | DatePicker | Yes | No | date, after:today |
+**Input Fields:**
+| Field | Type | Required | Validation |
+|-------|------|----------|------------|
+| <field_name> | <component_type> | Yes/No | <rules> |
 
-**Table Columns:**
-| Column | Component | Sortable | Searchable | Toggleable | Transform |
-|--------|-----------|----------|------------|------------|-----------|
-| employee.FullName | TextColumn | Yes | Yes (custom scope) | No | — |
-| Status | BadgeColumn | Yes | No | No | enum label + color |
+**Display Columns:**
+| Column | Sortable | Searchable | Transform |
+|--------|----------|------------|-----------|
+| <column_name> | Yes/No | Yes/No | <transform_description> |
 
 **Filters:**
 | Filter | Type | Options |
 |--------|------|---------|
-| Status | SelectFilter | LeaveStatus enum |
-| LeaveType | SelectFilter | CONST_LeaveType query |
-
-**Search:** Global search on employee.FullName (custom scope via SearchHelper)
+| <filter_name> | <filter_type> | <options_source> |
 
 **Actions:**
-| Action | Type | Permission | Side Effect |
-|--------|------|------------|-------------|
-| Export PDF | Header | ums:hr:employee-leaves:export | Dispatches ExportEmployeeLeavesPdfJob |
-| Delete | Row | ums:hr:employee-leaves:delete | Soft delete |
+| Action | Permission | Side Effect |
+|--------|------------|-------------|
+| <action_name> | <permission_string> | <description> |
 
 **Eager Loading:** employee, leavePolicy.leaveType, transactions
 **Default Sort:** CreationTime DESC
@@ -654,144 +614,25 @@ Check for an existing cached audit:
 
 ### 8b: Build JSON
 
-Assemble all collected data from Steps 3-6 into a single JSON object with these 16 top-level keys:
+Assemble all collected data from Steps 3-5 into a single JSON object. The structure should contain these top-level keys: `meta`, `summary`, `models`, `tables`, `relationships`, `lineage`, `fieldMap`, `dataFlow`, `enums`, `uiComponents`, `observers`, `jobs`, `policies`, `services`. Populate each key with the data extracted in previous steps. Use the module-audit-template.html format expectations as a guide for the data structure.
 
 ```json
 {
-  "meta": {
-    "module": "leave",
-    "generatedAt": "2026-03-31T14:30:00Z",
-    "branch": "feature/xyz",
-    "version": "1.0"
-  },
-  "summary": {
-    "modelCount": 5,
-    "tableCount": 5,
-    "resourceCount": 2,
-    "jobCount": 8,
-    "relationshipCount": 12,
-    "lineageFieldCount": 34,
-    "lineageConfidence": { "high": 28, "medium": 4, "low": 2 },
-    "warnings": ["..."]
-  },
-  "models": {
-    "HR_EmployeeLeaves": {
-      "file": "app/Models/HR_EmployeeLeaves.php",
-      "table": "HR_EmployeeLeaves",
-      "fillable": ["EmployeeId", "StartDate", "..."],
-      "casts": { "Status": "LeaveStatus" },
-      "traits": ["SoftDeletes", "HasFactory"],
-      "accessors": [{ "name": "getFullNameAttribute", "returns": "string", "summary": "..." }],
-      "bootEvents": [{ "event": "created", "summary": "..." }],
-      "observers": ["HR_EmployeeLeavesObserver"],
-      "scopes": ["ScopedByOrganization"]
-    }
-  },
-  "tables": {
-    "HR_EmployeeLeaves": {
-      "columns": [
-        { "name": "Id", "type": "bigint", "nullable": false, "default": null, "fk": null },
-        { "name": "EmployeeId", "type": "bigint", "nullable": false, "default": null, "fk": "HR_Employees.Id" }
-      ],
-      "indexes": ["PK_Id", "IX_EmployeeId"],
-      "rowSample": [{ "Id": 1, "EmployeeId": 100, "...": "..." }]
-    }
-  },
-  "relationships": [
-    { "from": "HR_EmployeeLeaves", "to": "HR_Employees", "type": "belongsTo", "fk": "EmployeeId", "confirmed": true }
-  ],
-  "lineage": [
-    {
-      "uiField": "employee.FullName",
-      "sourceTable": "HR_Employees",
-      "sourceColumn": "FullName",
-      "chain": ["employee", "FullName"],
-      "type": "fk_chain",
-      "confidence": "high",
-      "transforms": ["formatStateUsing: trim"],
-      "localeVariants": null
-    }
-  ],
-  "fieldMap": [
-    {
-      "dbColumn": "HR_EmployeeLeaves.StartDate",
-      "formField": { "component": "DatePicker", "required": true },
-      "tableColumn": { "component": "TextColumn", "sortable": true },
-      "exportColumn": "Column C"
-    }
-  ],
-  "dataFlow": [
-    {
-      "name": "Create Leave",
-      "steps": [
-        "User fills form in EmployeeLeavesResource::form()",
-        "Validation runs (date range, balance)",
-        "Model::create() inserts into HR_EmployeeLeaves",
-        "Observer creates transaction record"
-      ]
-    }
-  ],
-  "enums": {
-    "LeaveStatus": {
-      "file": "app/Enum/LeaveStatus.php",
-      "backedType": "int",
-      "cases": [
-        { "name": "Pending", "value": 0, "label": "معلق / Pending", "badgeColor": "warning" }
-      ]
-    }
-  },
-  "resources": {
-    "EmployeeLeavesResource": {
-      "file": "app/Filament/Resources/EmployeeLeavesResource.php",
-      "model": "HR_EmployeeLeaves",
-      "formFields": [{ "name": "EmployeeId", "component": "Select", "required": true, "live": true }],
-      "tableColumns": [{ "name": "employee.FullName", "component": "TextColumn", "sortable": true }],
-      "filters": [{ "name": "Status", "type": "SelectFilter", "options": "LeaveStatus" }],
-      "actions": [{ "name": "export-pdf", "type": "header", "permission": "ums:hr:employee-leaves:export" }],
-      "eagerLoading": ["employee", "leavePolicy.leaveType"],
-      "defaultSort": { "column": "CreationTime", "direction": "desc" },
-      "pagination": [10, 25, 50]
-    }
-  },
-  "observers": {
-    "HR_EmployeeLeavesObserver": {
-      "file": "app/Observers/HR_EmployeeLeavesObserver.php",
-      "events": [{ "event": "created", "sideEffect": "Creates transaction" }]
-    }
-  },
-  "jobs": {
-    "ExportEmployeeLeavesPdfJob": {
-      "file": "app/Jobs/ExportEmployeeLeavesPdfJob.php",
-      "queue": "default",
-      "constructorParams": ["filters", "userId"],
-      "output": "PDF",
-      "storagePath": "exports/leaves_{timestamp}.pdf",
-      "notification": "database",
-      "chunking": "chunkById(100)",
-      "errorHandling": "failed() sends error notification"
-    }
-  },
-  "imports": {},
-  "policies": {
-    "EmployeeLeavesPolicy": {
-      "file": "app/Policies/EmployeeLeavesPolicy.php",
-      "permissions": [
-        { "method": "viewAny", "permission": "ums:hr:employee-leaves:view" }
-      ]
-    }
-  },
-  "services": {
-    "OptimizedLeaveService": {
-      "file": "app/Services/Leave/OptimizedLeaveService.php",
-      "methods": [{ "name": "calculateBalance", "summary": "Computes remaining leave days for employee" }]
-    }
-  },
-  "helpers": {
-    "LeavesHelper": {
-      "file": "app/Helpers/LeavesHelper.php",
-      "methods": [{ "name": "getLeaveStatusBadge", "summary": "Returns badge color for leave status" }]
-    }
-  }
+  "meta": { "module": "<module_name>", "generatedAt": "<timestamp>", "branch": "<git_branch>" },
+  "summary": { "modelCount": 0, "tableCount": 0, "relationshipCount": 0, "warnings": [] },
+  "models": { "<ModelName>": { "file": "<path>", "table": "<table>", "fields": [], "relationships": [] } },
+  "tables": { "<table>": { "columns": [{ "name": "<col>", "type": "<type>", "nullable": false }] } },
+  "relationships": [{ "from": "<ModelA>", "to": "<ModelB>", "type": "<type>", "fk": "<col>" }],
+  "lineage": [{ "uiField": "<field>", "sourceTable": "<table>", "sourceColumn": "<col>", "confidence": "high" }],
+  "fieldMap": [{ "dbColumn": "<table.col>", "uiField": "<component>", "required": true }],
+  "dataFlow": [{ "name": "<flow>", "steps": ["<step1>", "<step2>"] }],
+  "enums": { "<EnumName>": { "file": "<path>", "cases": [{ "name": "<case>", "value": "<val>" }] } },
+  "uiComponents": { "<ComponentName>": { "file": "<path>", "fields": [], "actions": [] } },
+  "observers": { "<ObserverName>": { "events": [{ "event": "<type>", "sideEffect": "<desc>" }] } },
+  "jobs": { "<JobName>": { "file": "<path>", "trigger": "<how>", "output": "<what>" } },
+  "policies": { "<PolicyName>": { "file": "<path>", "permissions": [] } },
+  "services": { "<ServiceName>": { "file": "<path>", "methods": [] } },
+  "checksums": { "<file_path>": "<md5>" }
 }
 ```
 

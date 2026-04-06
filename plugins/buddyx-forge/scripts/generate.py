@@ -357,7 +357,7 @@ disable-model-invocation: true
 
 # {title} — Project Orchestrator
 
-Orchestrator for the {title} project. Parses intent, selects domain/infrastructure agents, dispatches with context.
+Orchestrator for the {title} project. This is a **routing table** (not an active agent) — Claude's main context reads this skill to decide which agent to dispatch for a given task.
 
 ## STRICT RULES
 
@@ -373,8 +373,9 @@ Orchestrator for the {title} project. Parses intent, selects domain/infrastructu
 
 - **Single agent** (1 domain, no DB change): dispatch domain agent only
 - **Sequential chain** (DB change needed): db-agent → domain-agent → review-agent
+- **Multi-domain** (keywords match 2+ domains): dispatch team-lead to coordinate
 - **Parallel** (independent domains): dispatch in parallel → review-agent
-- **Full sweep** (all domains): all domain agents → review-agent
+- **Full sweep** ("audit all", "check everything", "full review"): all domain agents → review-agent
 
 ## Agent Inventory
 
@@ -597,6 +598,11 @@ You are the Code Quality Gate for the {title} project. READ ONLY — review and 
 
 CRITICAL: You did NOT write this code. Review it critically. Do NOT say "looks good" unless verified.
 
+## Step 1: Identify Changed Files
+Run `git diff --name-only HEAD` to find which files changed. Review ONLY those files — do not review the entire codebase.
+
+If no git changes found, ask the user which files to review.
+
 ## Constraints
 - NEVER commit code.
 - NEVER modify any files.
@@ -607,7 +613,7 @@ CRITICAL: You did NOT write this code. Review it critically. Do NOT say "looks g
 
 ## Response Format
 ```
-### file-path.php
+### <file-path>
 Status: PASS | FAIL
 Violations (if FAIL):
 1. [RULE] Description (line X) — Fix: ...
@@ -669,11 +675,18 @@ You are the Team Lead for {title} multi-agent operations.
 ## Infrastructure Agents
 {name}-discovery, {name}-db, {name}-review, {name}-maintenance
 
+## Before Dispatching
+- READ `.claude/skills/{name}/context/domain-map.md` to understand file ownership
+- Break the user's request into independent tasks per domain
+
 ## How to Coordinate
 
 ### 1. Break work into independent tasks per domain
-### 2. Dispatch workers (max 5 agents simultaneously)
-### 3. Collect results — handle DONE/NEEDS_CONTEXT/BLOCKED
+### 2. Dispatch workers (max 5 simultaneously — if more, batch and wait)
+### 3. For each agent response:
+  - **DONE** — collect results
+  - **NEEDS_CONTEXT** — provide requested context, re-dispatch
+  - **BLOCKED** — report blocker to user, skip that agent
 ### 4. Dispatch {name}-review as the final step
 ### 5. Present unified results
 
@@ -690,8 +703,25 @@ You are the Team Lead for {title} multi-agent operations.
 - NEVER dispatch more than 5 agents simultaneously.
 - ALWAYS dispatch {name}-review as the final step.
 
+## Output Format (ALWAYS use this structure)
+
+```
+## Summary Report
+
+| Agent | Status | Key Findings |
+|-------|--------|-------------|
+| {name}-<domain> | DONE/BLOCKED | <one-line summary> |
+| ... | ... | ... |
+
+## Details
+<per-agent details>
+
+## Overall Status
+DONE | PARTIAL_DONE | BLOCKED
+```
+
 ## After You Finish
-Report findings. Include new patterns, gotchas.
+{mem_block}
 """
 
 
@@ -1175,14 +1205,28 @@ find src/services -name "*.ts" -o -name "*.js" 2>/dev/null | sort""",
     # Memory instructions (conditional on agentMemory flag)
     if has_memory:
         memory_instructions_domain = f"1. READ `.claude/agent-memory/{name}-{{DOMAIN}}/MEMORY.md`\n2. READ `.claude/agent-memory/shared-learnings.md`"
-        memory_instructions_infra = f"1. READ `.claude/agent-memory/{name}-<agent>/MEMORY.md`\n2. READ `.claude/agent-memory/shared-learnings.md`"
         memory_write_domain = f"WRITE to `.claude/agent-memory/{name}-{{DOMAIN}}/MEMORY.md`:"
-        memory_write_infra = "WRITE to your agent-memory MEMORY.md if you discovered new patterns."
+        memory_after_domain = f"""WRITE to `.claude/agent-memory/{name}-{{DOMAIN}}/MEMORY.md`:
+1. New patterns discovered
+2. Gotchas encountered
+3. If you verified a hypothesis from shared-learnings.md, write: `[CONFIRM: pattern description]`
+4. If you discovered a new pattern, add to shared-learnings.md as `[NEW 0/3] [YYYY-MM-DD] description`"""
     else:
         memory_instructions_domain = "1. Check project CLAUDE.md for recent learnings and conventions."
-        memory_instructions_infra = "1. Check project CLAUDE.md for recent learnings and conventions."
         memory_write_domain = "Report any new patterns or conventions you discovered."
-        memory_write_infra = "Report any new patterns or conventions you discovered."
+        memory_after_domain = "Report any new patterns or conventions you discovered to the user."
+
+    # Per-agent infra memory (agent-specific paths)
+    def _mem_infra(agent_suffix):
+        if has_memory:
+            return (
+                f"1. READ `.claude/agent-memory/{name}-{agent_suffix}/MEMORY.md`\n2. READ `.claude/agent-memory/shared-learnings.md`",
+                f"WRITE to `.claude/agent-memory/{name}-{agent_suffix}/MEMORY.md` if you discovered new patterns."
+            )
+        return (
+            "1. Check project CLAUDE.md for recent learnings and conventions.",
+            "Report any new patterns or conventions you discovered."
+        )
 
     # Commit hook block (conditional on commitPolicy)
     if commit_policy == "user":
@@ -1214,9 +1258,10 @@ find src/services -name "*.ts" -o -name "*.js" 2>/dev/null | sort""",
             + hookify_rules_map.get(framework, hookify_rules_map.get("laravel", ""))
         ),
         "MEMORY_INSTRUCTIONS_DOMAIN": memory_instructions_domain,
-        "MEMORY_INSTRUCTIONS_INFRA": memory_instructions_infra,
+        "MEMORY_INSTRUCTIONS_INFRA": _mem_infra("discovery")[0],
         "MEMORY_WRITE_DOMAIN": memory_write_domain,
-        "MEMORY_WRITE_INFRA": memory_write_infra,
+        "MEMORY_AFTER_DOMAIN": memory_after_domain,
+        "MEMORY_WRITE_INFRA": _mem_infra("discovery")[1],
         "COMMIT_HOOK_BLOCK": commit_hook_block,
     }
 
@@ -1238,19 +1283,25 @@ find src/services -name "*.ts" -o -name "*.js" 2>/dev/null | sort""",
     # 2. Domain agents (template)
     for domain in domains:
         domain_title = domain.replace("-", " ").title()
+        source_dir = source_dir_map.get(framework, "")
+        ext = file_ext_map.get(framework, r"\.php$").replace(r"\.", ".").replace("$", "").replace("(", "").replace(")", "").replace("|", ", ")
+        domain_files_hint = f"Look for files related to `{domain}` in `{source_dir}` with extensions: {ext}\n<!-- Run /buddyx-forge:scan to populate exact file paths -->"
         replacements = {
             **common,
             "DOMAIN": domain,
             "DOMAIN_TITLE": domain_title,
             "DOMAIN_DESCRIPTION": f"{domain_title} specialist. Use when working on {domain}-related tasks.",
+            "DOMAIN_FILES_HINT": domain_files_hint,
         }
         content = render_template("agent-domain.tmpl", replacements)
         write_file(output_dir, f"agents/{name}-{domain}.md", content, dry_run)
 
     # 3. Infrastructure agents (template + builders)
     for agent_tmpl in ["agent-discovery.tmpl", "agent-db.tmpl", "agent-maintenance.tmpl"]:
-        content = render_template(agent_tmpl, common)
         agent_name = agent_tmpl.replace("agent-", "").replace(".tmpl", "")
+        mem_read, mem_write = _mem_infra(agent_name)
+        infra_replacements = {**common, "MEMORY_INSTRUCTIONS_INFRA": mem_read, "MEMORY_WRITE_INFRA": mem_write}
+        content = render_template(agent_tmpl, infra_replacements)
         write_file(output_dir, f"agents/{name}-{agent_name}.md", content, dry_run)
 
     # Review agent (builder)
@@ -1265,9 +1316,12 @@ find src/services -name "*.ts" -o -name "*.js" 2>/dev/null | sort""",
     # Migration agent — only if shared DB configured
     shared_db = config.get("sharedDb")
     if shared_db:
+        mig_mem_r, mig_mem_w = _mem_infra("migration")
         mig_content = render_template("agent-migration.tmpl", {
             **common,
             "SHARED_DB_PATH": shared_db,
+            "MEMORY_INSTRUCTIONS_INFRA": mig_mem_r,
+            "MEMORY_WRITE_INFRA": mig_mem_w,
         })
         write_file(output_dir, f"agents/{name}-migration.md", mig_content, dry_run)
         optional_agents.append("migration")
@@ -1279,9 +1333,12 @@ find src/services -name "*.ts" -o -name "*.js" 2>/dev/null | sort""",
     framework = config.get("techStack", {}).get("framework", "").lower()
     if framework in ("laravel", "django", "rails", "nextjs", "next.js"):
         optimizer_model = {"budget": "sonnet", "balanced": "sonnet", "quality": "opus"}.get(model_budget, "sonnet")
+        qo_mem_r, qo_mem_w = _mem_infra("query-optimizer")
         opt_content = render_template("agent-query-optimizer.tmpl", {
             **common,
             "OPTIMIZER_MODEL": optimizer_model,
+            "MEMORY_INSTRUCTIONS_INFRA": qo_mem_r,
+            "MEMORY_WRITE_INFRA": qo_mem_w,
         })
         write_file(output_dir, f"agents/{name}-query-optimizer.md", opt_content, dry_run)
         optional_agents.append("query-optimizer")
@@ -1292,7 +1349,8 @@ find src/services -name "*.ts" -o -name "*.js" 2>/dev/null | sort""",
     # MCP dev agent — if project has .mcp.json or builds MCP servers
     has_mcp = bool(config.get("mcpServers")) or framework in ("nodejs", "node", "express", "fastify")
     if has_mcp:
-        mcp_content = render_template("agent-mcp-dev.tmpl", common)
+        mcp_mem_r, mcp_mem_w = _mem_infra("mcp-dev")
+        mcp_content = render_template("agent-mcp-dev.tmpl", {**common, "MEMORY_INSTRUCTIONS_INFRA": mcp_mem_r, "MEMORY_WRITE_INFRA": mcp_mem_w})
         write_file(output_dir, f"agents/{name}-mcp-dev.md", mcp_content, dry_run)
         optional_agents.append("mcp-dev")
         if has_memory:
