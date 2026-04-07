@@ -20,6 +20,8 @@ Multi-agent development system generator for any project.
 | `/buddyx-forge:dashboard` | Open agent metrics dashboard in browser. |
 | `/buddyx-forge:upgrade` | Upgrade setup to latest version, preserving memory and customizations. |
 | `/buddyx-forge:export-config` | Export config as `.buddyx-forge.json` for team sharing. |
+| `/buddyx-forge:prompt-guide` | Interactive prompt engineering guide — write better prompts for Claude Code. |
+| `/buddyx-forge:reverse` | Reverse-engineer existing `.claude/` setup — explains every file and maps architecture. |
 | `/buddyx-forge:dream` | Memory consolidation — clean stale entries, promote hypotheses. |
 
 ## Quick Start

@@ -133,6 +133,8 @@ Each framework gets:
 | `/buddyx-forge:dashboard` | Open agent metrics dashboard in browser |
 | `/buddyx-forge:upgrade` | Upgrade setup to latest version, preserving customizations |
 | `/buddyx-forge:export-config` | Export config as `.buddyx-forge.json` for team sharing |
+| `/buddyx-forge:prompt-guide` | Interactive prompt engineering guide |
+| `/buddyx-forge:reverse` | Reverse-engineer existing setup — explains every file |
 | `/buddyx-forge:dream` | Memory consolidation — clean stale entries, promote hypotheses |
 
 ## Setup Questions
@@ -227,6 +229,146 @@ diagram: DB tables for student enrollment
 
 The orchestrator auto-detects the domain and dispatches the right agent.
 
+## Prompt Engineering Tips
+
+Write better prompts to get better results from your multi-agent system. Run `/buddyx-forge:prompt-guide` for the full interactive guide.
+
+### The Formula
+
+```
+[action]: [location] — [what's wrong / what to do]. [scope limit].
+```
+
+### Good vs Bad Prompts
+
+| Bad | Good | Why |
+|-----|------|-----|
+| `fix the login bug` | `fix: AuthController@login — returns 500 on uppercase emails` | Specific location + exact error |
+| `the payment is broken` | `fix: PaymentService@charge — returns null when amount is 0. Should return zero-amount receipt.` | Current vs expected behavior |
+| `add sorting to users` | `add: sortable columns to UserResource. Only touch the Resource file.` | Scope limit prevents over-engineering |
+| `refactor billing` | `refactor: extract validation from BillingController into BillingRequest — match OrderRequest pattern` | References existing code pattern |
+| `fix login, add export, refactor payments` | Send 3 separate prompts | One task per prompt = better agent routing |
+
+### Power Modifiers
+
+| Modifier | Example |
+|----------|---------|
+| `only touch [file]` | `fix: UserService — only touch app/Services/UserService.php` |
+| `don't modify [file]` | `refactor: billing — don't modify migrations` |
+| `show me before changing` | `add: caching to DashboardController — show me before changing` |
+| `read only` | `check: auth module — read only, report issues` |
+| `match [file] pattern` | `add: StudentExport — match InvoiceExport pattern` |
+| `with tests` | `add: discount calculation — with tests` |
+
+### Chain Prompts for Complex Work
+
+```
+1. explain: how does the payment webhook flow work? read only
+2. diagram: payment flow from checkout to confirmation
+3. add: retry logic to PaymentService@charge — max 3 retries with backoff
+4. audit: payment module — focus on error handling
+```
+
+### Claude Code Official Tips
+
+- **Use `@` to reference files** — `fix: @app/Services/PaymentService.php` gives Claude exact context
+- **Let Claude interview you** for big features — start minimal, say "interview me about requirements first"
+- **Interrupt anytime** — press Escape + Enter to course-correct mid-response
+- **Start vague when exploring** — `what would you improve in this file?` surfaces unexpected issues
+- **Avoid over-engineering** — add `no new files` or `keep it in the existing file` to prevent abstractions
+- **Use CLI tools** — `gh`, `aws`, `gcloud` are more context-efficient than API calls
+
+Run `/buddyx-forge:prompt-guide` for the full interactive guide with 7 sections, framework-specific examples, and practice mode.
+
+> Sources: [Claude Code Best Practices](https://code.claude.com/docs/en/best-practices) | [Claude Prompting Guide](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview)
+
+## How It Works Under the Hood
+
+### Generation Flow
+
+```
+Your answers to 10 questions
+        ↓
+   Config JSON
+        ↓
+   Python Generator (7 modules, zero dependencies)
+        ↓
+   .claude/ directory (50-80 files)
+        ↓
+   Claude Code reads agents, rules, hooks automatically
+```
+
+### What Each Module Does
+
+| Module | Input | Output |
+|--------|-------|--------|
+| `validators.py` | Config JSON | Validated config (rejects bad names, invalid enums, unsafe paths) |
+| `builders/settings.py` | Config | `settings.json` — permissions, hooks, env vars |
+| `builders/agents.py` | Config | Review agent + team-lead agent (framework-specific checklists) |
+| `builders/rules.py` | Config | `CLAUDE.md` + `RULES.md` (framework rules, delegation table) |
+| `builders/orchestrator.py` | Config | Orchestrator SKILL.md + domain-map.md |
+| `builders/frameworks.py` | — | Framework maps: file extensions, discovery commands, DB tools, hookify rules |
+| `generate.py` | All above | Orchestrates everything + renders templates + writes files |
+
+### How Agent Routing Works
+
+When you type a prompt, Claude Code reads:
+1. **CLAUDE.md** — sees the delegation table, knows which agent handles which domain
+2. **Orchestrator SKILL.md** — sees keyword-to-domain mapping and dispatch strategy
+3. **Domain agent file** — sees the agent's tools, model, rules, and file ownership
+
+```
+"fix: PaymentService — bug"
+     ↓
+Claude reads CLAUDE.md → "Payment" matches billing domain
+     ↓
+Dispatches {name}-billing agent (owns billing files, knows framework rules)
+     ↓
+Agent reads RULES.md, reads its memory, fixes the bug
+     ↓
+Orchestrator auto-dispatches {name}-review agent
+     ↓
+Review agent checks: N+1? Security? Code style? → PASS/FAIL
+```
+
+### How Safety Hooks Work
+
+Hook scripts run automatically before/after Claude uses tools:
+
+```
+Claude wants to run: rm -rf /var
+     ↓
+PreToolUse hook fires → safety-guard.sh
+     ↓
+Script checks: recursive delete on sensitive path? → BLOCKED
+     ↓
+Claude sees: "BLOCKED: Recursive delete on sensitive path."
+```
+
+| Hook | When | What It Blocks |
+|------|------|---------------|
+| `safety-guard.sh` | Before any Bash command | `rm -rf /`, `chmod 777`, dangerous patterns |
+| `block-git-commit.sh` | Before any Bash command | `git commit`, `git push` (when commitPolicy=user) |
+| `block-migration.sh` | Before Write/Edit | Migration files (when sharedDb is set) |
+| `auto-format-new-files.sh` | After Write | Runs formatter on new files |
+| `detect-new-file-created.sh` | After Write/Edit | Logs new files for domain-map updates |
+
+### How Memory Works
+
+```
+Agent discovers pattern → writes to agent-memory/{name}/MEMORY.md
+     ↓
+Extract-learnings hook captures it → adds to shared-learnings.md as [NEW 0/3]
+     ↓
+Next agent encounters same pattern → confirms it → [NEW 1/3]
+     ↓
+After 3 confirmations → auto-promoted to [CONFIRMED]
+     ↓
+All agents now apply this pattern by default
+```
+
+Run `/buddyx-forge:reverse` to analyze your existing setup and see all of this in action.
+
 ## Testing
 
 Run the built-in test suite:
@@ -252,7 +394,7 @@ Plugin (55+ files)
 │   ├── validators.py — config validation (68 lines)
 │   └── builders/ — settings, agents, rules, orchestrator, frameworks
 ├── Templates: 10 agent + 11 hook + 4 skill templates
-├── Commands: setup, quick, scan, health, add-domain, dashboard, upgrade, export-config, dream
+├── Commands: setup, quick, scan, health, add-domain, dashboard, upgrade, export-config, prompt-guide, reverse, dream
 ├── References: detect-stack, customize-guide, 7 framework packs, tech-recommendations
 └── Marketplace: plugin.json + marketplace.json
 
