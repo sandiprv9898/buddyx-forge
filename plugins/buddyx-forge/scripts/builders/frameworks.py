@@ -1,17 +1,18 @@
 """Framework-specific data maps and checklists for buddyx-forge generator."""
 
 
-# ─── Framework alias normalization ───
-
-_FRAMEWORK_ALIASES = {
-    "next.js": "nextjs",
-    "node": "nodejs",
-}
-
-
 def normalize_framework(fw: str) -> str:
-    """Normalize framework name to canonical form (e.g., 'next.js' → 'nextjs')."""
-    return _FRAMEWORK_ALIASES.get(fw, fw)
+    """Normalize framework name to canonical form.
+
+    Handles aliases like 'next.js' → 'nextjs', 'node' → 'nodejs', etc.
+    Always call this before looking up framework maps.
+    """
+    fw = fw.lower().strip()
+    aliases = {
+        "next.js": "nextjs",
+        "node": "nodejs",
+    }
+    return aliases.get(fw, fw)
 
 
 # ─── Permission commands per framework (used by settings builder) ───
@@ -51,7 +52,10 @@ FILE_EXT_MAP = {
     "express": r"\.(ts|js)$",
 }
 for _alias in ("next.js", "nodejs", "node", "fastify", "nestjs", "hono"):
-    FILE_EXT_MAP[_alias] = r"\.(ts|js)$"
+    if _alias in ("next.js",):
+        FILE_EXT_MAP[_alias] = FILE_EXT_MAP["nextjs"]
+    else:
+        FILE_EXT_MAP[_alias] = r"\.(ts|js)$"
 
 
 # ─── Source directory filter per framework ───
@@ -66,7 +70,10 @@ SOURCE_DIR_MAP = {
     "express": "src/",
 }
 for _alias in ("next.js", "nodejs", "node", "fastify", "nestjs", "hono"):
-    SOURCE_DIR_MAP[_alias] = "src/"
+    if _alias in ("next.js",):
+        SOURCE_DIR_MAP[_alias] = SOURCE_DIR_MAP["nextjs"]
+    else:
+        SOURCE_DIR_MAP[_alias] = "src/"
 
 
 # ─── Discovery commands per framework ───
@@ -203,7 +210,7 @@ HOOKIFY_RULES_MAP = {
 - action: warn
 - message: "Check for N+1 queries -- use .includes() or .preload()." """,
 }
-for _fw in ("nextjs", "react", "express", "nodejs", "node", "fastify", "nestjs", "hono"):
+for _fw in ("nextjs", "next.js", "react", "express", "nodejs", "node", "fastify", "nestjs", "hono"):
     HOOKIFY_RULES_MAP[_fw] = _JS_HOOKIFY
 
 
@@ -211,7 +218,9 @@ for _fw in ("nextjs", "react", "express", "nodejs", "node", "fastify", "nestjs",
 
 def get_framework_checklist(config: dict) -> str:
     """Return framework-specific review checklist."""
-    framework = config.get("techStack", {}).get("framework", "laravel").lower()
+    framework = normalize_framework(
+        config.get("techStack", {}).get("framework", "laravel")
+    )
     has_filament = config.get("techStack", {}).get("hasFilament", False)
 
     if framework == "laravel":
@@ -245,7 +254,7 @@ def get_framework_checklist(config: dict) -> str:
 - [ ] Grouped and alphabetical
 - [ ] No inline FQCN"""
 
-    elif framework in ("nextjs", "next.js"):
+    elif framework == "nextjs":
         return """### Next.js / React
 - [ ] Server Components by default -- `'use client'` only when needed
 - [ ] `next/image` not raw `<img>`, `next/link` not raw `<a>`
@@ -351,7 +360,7 @@ def get_framework_checklist(config: dict) -> str:
 - [ ] Absolute imports with `@/` prefix
 - [ ] Grouped: React -> third-party -> local"""
 
-    elif framework in ("nodejs", "node", "express", "fastify", "nestjs", "hono"):
+    elif framework in ("nodejs", "express", "fastify", "nestjs", "hono"):
         return """### Node.js Backend
 - [ ] Input validation on every endpoint (Zod/Joi)
 - [ ] Business logic in services, not routes
