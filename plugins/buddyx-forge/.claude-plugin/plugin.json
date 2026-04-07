@@ -13,10 +13,10 @@
     {"name": "health", "description": "Validate setup integrity (0-100 score)", "file": "commands/health.md"},
     {"name": "add-domain", "description": "Add a new domain agent", "file": "commands/add-domain.md"},
     {"name": "dashboard", "description": "Open agent metrics dashboard", "file": "commands/dashboard.md"},
+    {"name": "dream", "description": "Memory consolidation and cleanup", "file": "commands/dream.md"},
     {"name": "upgrade", "description": "Upgrade setup to latest version, preserving customizations", "file": "commands/upgrade.md"},
     {"name": "export-config", "description": "Export config as .buddyx-forge.json for team sharing", "file": "commands/export-config.md"},
-    {"name": "prompt-guide", "description": "Interactive prompt engineering guide for Claude Code", "file": "commands/prompt-guide.md"},
-    {"name": "reverse", "description": "Reverse-engineer existing .claude/ setup", "file": "commands/reverse.md"},
-    {"name": "dream", "description": "Memory consolidation and cleanup", "file": "commands/dream.md"}
+    {"name": "prompt-guide", "description": "Interactive prompt engineering guide", "file": "commands/prompt-guide.md"},
+    {"name": "reverse", "description": "Reverse-engineer existing setup — explains every file", "file": "commands/reverse.md"}
   ]
 }
