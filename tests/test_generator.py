@@ -358,13 +358,17 @@ except ValueError:
 # === Hooks Key Validation ===
 print("\n=== Hooks Key Validation ===")
 
+import io
+_stderr_capture = io.StringIO()
 try:
     cfg = make_config({"hooks": {"deleteEverything": True}})
     cfg_path = write_config(cfg)
-    load_config(cfg_path)
-    test("unknown hook key rejected", False)
+    import contextlib
+    with contextlib.redirect_stderr(_stderr_capture):
+        load_config(cfg_path)
+    test("unknown hook key warns (not error)", "WARNING" in _stderr_capture.getvalue())
 except ValueError:
-    test("unknown hook key rejected", True)
+    test("unknown hook key warns (not error)", False)
 
 try:
     cfg = make_config({"hooks": {"blockDangerous": True, "autoFormat": True}})
