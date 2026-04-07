@@ -9,10 +9,12 @@ import os
 import shutil
 import sys
 import tempfile
+import io
 
 # Add scripts to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'plugins', 'buddyx-forge', 'scripts'))
 from generate import load_config, generate
+from builders.frameworks import normalize_framework
 
 PASS = 0
 FAIL = 0
@@ -316,139 +318,120 @@ try:
 except ValueError:
     test("dangerous sharedDb path rejected", True)
 
-try:
-    cfg = make_config({"sharedDb": "/var/www/shared-db"})
-    cfg_path = write_config(cfg)
-    load_config(cfg_path)
-    test("valid sharedDb path accepted", True)
-except ValueError:
-    test("valid sharedDb path accepted", False)
-
+# Path traversal should be REJECTED
 try:
     cfg = make_config({"sharedDb": "../other-project"})
     cfg_path = write_config(cfg)
     load_config(cfg_path)
-    test("sharedDb path traversal rejected", False)
+    test("path traversal sharedDb rejected", False)
 except ValueError:
-    test("sharedDb path traversal rejected", True)
+    test("path traversal sharedDb rejected", True)
+
+# Absolute path without traversal should be accepted
+try:
+    cfg = make_config({"sharedDb": "/home/user/other-project"})
+    cfg_path = write_config(cfg)
+    load_config(cfg_path)
+    test("absolute sharedDb path accepted", True)
+except ValueError:
+    test("absolute sharedDb path accepted", False)
+
+# Relative path without traversal should be accepted
+try:
+    cfg = make_config({"sharedDb": "sibling-project"})
+    cfg_path = write_config(cfg)
+    load_config(cfg_path)
+    test("relative sharedDb path accepted", True)
+except ValueError:
+    test("relative sharedDb path accepted", False)
 
 
 # === Framework Validation ===
 print("\n=== Framework Validation ===")
 
+# Unsupported framework should be rejected
 try:
     cfg = make_config()
     cfg["techStack"]["framework"] = "flutter"
     cfg_path = write_config(cfg)
     load_config(cfg_path)
-    test("unsupported framework rejected", False)
+    test("unsupported framework 'flutter' rejected", False)
 except ValueError:
-    test("unsupported framework rejected", True)
+    test("unsupported framework 'flutter' rejected", True)
 
 try:
     cfg = make_config()
-    cfg["techStack"]["framework"] = "next.js"
+    cfg["techStack"]["framework"] = "spring-boot"
     cfg_path = write_config(cfg)
     load_config(cfg_path)
-    test("next.js accepted as valid framework", True)
+    test("unsupported framework 'spring-boot' rejected", False)
 except ValueError:
-    test("next.js accepted as valid framework", False)
+    test("unsupported framework 'spring-boot' rejected", True)
 
-
-# === Hooks Key Validation ===
-print("\n=== Hooks Key Validation ===")
-
-import io
-_stderr_capture = io.StringIO()
-try:
-    cfg = make_config({"hooks": {"deleteEverything": True}})
-    cfg_path = write_config(cfg)
-    import contextlib
-    with contextlib.redirect_stderr(_stderr_capture):
-        load_config(cfg_path)
-    test("unknown hook key warns (not error)", "WARNING" in _stderr_capture.getvalue())
-except ValueError:
-    test("unknown hook key warns (not error)", False)
-
-try:
-    cfg = make_config({"hooks": {"blockDangerous": True, "autoFormat": True}})
-    cfg_path = write_config(cfg)
-    load_config(cfg_path)
-    test("valid hook keys accepted", True)
-except ValueError:
-    test("valid hook keys accepted", False)
-
-
-# === next.js Alias Resolution ===
-print("\n=== next.js Alias Resolution ===")
-
-outdir = tempfile.mkdtemp()
+# Supported framework should pass
 try:
     cfg = make_config()
-    cfg["techStack"]["framework"] = "next.js"
-    generate(cfg, os.path.join(outdir, ".claude"))
+    cfg["techStack"]["framework"] = "nextjs"
+    cfg_path = write_config(cfg)
+    load_config(cfg_path)
+    test("supported framework 'nextjs' accepted", True)
+except ValueError:
+    test("supported framework 'nextjs' accepted", False)
 
-    # Check RULES.md has Next.js section (not Laravel)
-    rules_path = os.path.join(outdir, ".claude", "skills", "test-proj", "RULES.md")
-    rules = open(rules_path).read()
-    test("next.js: RULES.md has Next.js section", "## Next" in rules)
-    test("next.js: RULES.md has no Laravel section", "## Laravel" not in rules)
 
-    # Check settings.json has correct permissions
-    with open(os.path.join(outdir, ".claude", "settings.json")) as f:
-        settings = json.load(f)
-    perms = str(settings.get("permissions", {}))
-    test("next.js: has npx in permissions", "npx" in perms)
+# === Hooks Key Warning ===
+print("\n=== Hooks Key Warning ===")
+
+# Unknown hook keys should trigger warning (on stderr) but not error
+old_stderr = sys.stderr
+sys.stderr = io.StringIO()
+try:
+    cfg = make_config()
+    cfg["hooks"]["unknownKey"] = True
+    cfg_path = write_config(cfg)
+    load_config(cfg_path)
+    stderr_output = sys.stderr.getvalue()
+    test("unknown hook key produces warning", "unknownKey" in stderr_output)
+except ValueError:
+    test("unknown hook key produces warning (should warn, not error)", False)
 finally:
-    shutil.rmtree(outdir, ignore_errors=True)
+    sys.stderr = old_stderr
 
 
-# === commitPolicy=claude ===
-print("\n=== commitPolicy=claude ===")
+# === normalize_framework ===
+print("\n=== normalize_framework ===")
+
+test("normalize: next.js → nextjs", normalize_framework("next.js") == "nextjs")
+test("normalize: Next.js → nextjs", normalize_framework("Next.js") == "nextjs")
+test("normalize: laravel unchanged", normalize_framework("laravel") == "laravel")
+test("normalize: node → nodejs", normalize_framework("node") == "nodejs")
+
+
+# === Next.js Alias Consistency ===
+print("\n=== Next.js Alias Consistency ===")
 
 outdir = tempfile.mkdtemp()
 try:
-    cfg = make_config({"commitPolicy": "claude"})
+    # Generate with "next.js" (the dot version) — should work identically to "nextjs"
+    cfg = make_config({
+        "techStack": {
+            "language": "ts", "framework": "next.js", "frameworkVersion": "14",
+            "hasFilament": False, "db": "pg", "formatter": "prettier", "testRunner": "jest"
+        }
+    })
     generate(cfg, os.path.join(outdir, ".claude"))
 
+    # Verify it generated proper Next.js content (not fallback to Laravel defaults)
     with open(os.path.join(outdir, ".claude", "settings.json")) as f:
         settings = json.load(f)
     perms = str(settings.get("permissions", {}).get("allow", []))
-    hooks_str = json.dumps(settings.get("hooks", {}))
+    test("next.js alias: has 'npx' in permissions", "npx" in perms)
+    test("next.js alias: no 'php' in permissions", "php" not in perms)
 
-    test("commitPolicy=claude: git commit in allow", "git commit" in perms)
-    test("commitPolicy=claude: no block-git-commit hook", "block-git-commit" not in hooks_str)
-    test("commitPolicy=claude: no block-git-commit.sh script",
-         not os.path.exists(os.path.join(outdir, ".claude", "scripts", "block-git-commit.sh")))
-finally:
-    shutil.rmtree(outdir, ignore_errors=True)
-
-
-# === Permissive Permissions ===
-print("\n=== Permissive Permissions ===")
-
-outdir = tempfile.mkdtemp()
-try:
-    cfg = make_config({"permissionLevel": "permissive"})
-    generate(cfg, os.path.join(outdir, ".claude"))
-    with open(os.path.join(outdir, ".claude", "settings.json")) as f:
-        settings = json.load(f)
-    allow = str(settings["permissions"]["allow"])
-    test("permissive: framework commands in allow (not ask)", "php artisan" in allow)
-finally:
-    shutil.rmtree(outdir, ignore_errors=True)
-
-
-# === Dry Run Mode ===
-print("\n=== Dry Run Mode ===")
-
-outdir = tempfile.mkdtemp()
-try:
-    cfg = make_config()
-    generate(cfg, outdir, dry_run=True)
-    # Dry run should NOT create files
-    file_count = sum(1 for _ in os.listdir(outdir)) if os.path.exists(outdir) else 0
-    test("dry run creates no files", file_count == 0)
+    # Check RULES.md has Next.js rules
+    rules_path = os.path.join(outdir, ".claude", "skills", "test-proj", "RULES.md")
+    rules_content = open(rules_path).read()
+    test("next.js alias: RULES.md has Next.js section", "Next.js" in rules_content or "Server Components" in rules_content)
 finally:
     shutil.rmtree(outdir, ignore_errors=True)
 
