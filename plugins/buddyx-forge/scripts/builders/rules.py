@@ -8,8 +8,10 @@ def build_claude_md(config: dict) -> str:
     name = config["projectName"]
     title = name.replace("-", " ").title()
     domains = config["domains"]
-    framework_raw = normalize_framework(config.get("techStack", {}).get("framework", "laravel").lower())
-    framework = framework_raw.replace("nextjs", "Next.js").replace("nodejs", "Node.js").title() if framework_raw in ("nextjs", "nodejs") else framework_raw.title()
+    framework_raw = normalize_framework(
+        config.get("techStack", {}).get("framework", "laravel")
+    )
+    framework = framework_raw.replace("nextjs", "Next.js").replace("nodejs", "Node.js").title() if framework_raw not in ("nextjs", "nodejs") else {"nextjs": "Next.js", "nodejs": "Node.js"}[framework_raw]
     version = config.get("techStack", {}).get("frameworkVersion", "")
     commit_policy = config.get("commitPolicy", "user")
     has_filament = config.get("techStack", {}).get("hasFilament", False)
@@ -140,7 +142,9 @@ def build_rules_md(config: dict) -> str:
     """Build complete RULES.md with framework-specific rules — no AI needed."""
     name = config["projectName"]
     title = name.replace("-", " ").title()
-    framework = normalize_framework(config.get("techStack", {}).get("framework", "laravel").lower())
+    framework = normalize_framework(
+        config.get("techStack", {}).get("framework", "laravel")
+    )
     commit_policy = config.get("commitPolicy", "user")
     has_filament = config.get("techStack", {}).get("hasFilament", False)
 
@@ -182,7 +186,7 @@ def build_rules_md(config: dict) -> str:
 
 """
 
-    elif framework in ("nextjs", "next.js"):
+    elif framework == "nextjs":
         rules += """## Next.js
 
 - Default to Server Components — only add 'use client' when needed
@@ -205,7 +209,7 @@ def build_rules_md(config: dict) -> str:
 
 """
 
-    elif framework in ("nodejs", "node", "express", "fastify", "nestjs", "hono"):
+    elif framework in ("nodejs", "express", "fastify", "nestjs", "hono"):
         rules += """## Node.js Backend
 
 - ES Modules (import/export) — not CommonJS
