@@ -28,6 +28,7 @@ from builders.orchestrator import build_orchestrator_skill, build_domain_map
 from builders.frameworks import (
     FILE_EXT_MAP, SOURCE_DIR_MAP, DISCOVERY_COMMANDS_MAP,
     DB_TOOLS_MAP, MAINTENANCE_COMMANDS_MAP, HOOKIFY_RULES_MAP,
+    normalize_framework,
 )
 
 
@@ -93,8 +94,8 @@ def generate(config: dict, output_dir: str, dry_run: bool = False):
     ro_model = model_map_ro.get(model_budget, "haiku")
     rw_model = model_map_rw.get(model_budget, "sonnet")
 
-    # Framework
-    framework = config.get("techStack", {}).get("framework", "laravel").lower()
+    # Framework (normalize aliases like "next.js" → "nextjs")
+    framework = normalize_framework(config.get("techStack", {}).get("framework", "laravel").lower())
 
     if dry_run:
         print(f"\n=== buddyx-forge DRY RUN for '{name}' ===\n")

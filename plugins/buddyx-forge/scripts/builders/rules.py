@@ -1,13 +1,15 @@
 """CLAUDE.md and RULES.md builders for buddyx-forge generator."""
 
+from .frameworks import normalize_framework
+
 
 def build_claude_md(config: dict) -> str:
     """Build complete CLAUDE.md — no AI needed."""
     name = config["projectName"]
     title = name.replace("-", " ").title()
     domains = config["domains"]
-    framework_raw = config.get("techStack", {}).get("framework", "laravel").lower()
-    framework = framework_raw.title()
+    framework_raw = normalize_framework(config.get("techStack", {}).get("framework", "laravel").lower())
+    framework = framework_raw.replace("nextjs", "Next.js").replace("nodejs", "Node.js").title() if framework_raw in ("nextjs", "nodejs") else framework_raw.title()
     version = config.get("techStack", {}).get("frameworkVersion", "")
     commit_policy = config.get("commitPolicy", "user")
     has_filament = config.get("techStack", {}).get("hasFilament", False)
@@ -138,7 +140,7 @@ def build_rules_md(config: dict) -> str:
     """Build complete RULES.md with framework-specific rules — no AI needed."""
     name = config["projectName"]
     title = name.replace("-", " ").title()
-    framework = config.get("techStack", {}).get("framework", "laravel").lower()
+    framework = normalize_framework(config.get("techStack", {}).get("framework", "laravel").lower())
     commit_policy = config.get("commitPolicy", "user")
     has_filament = config.get("techStack", {}).get("hasFilament", False)
 

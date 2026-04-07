@@ -1,6 +1,19 @@
 """Framework-specific data maps and checklists for buddyx-forge generator."""
 
 
+# ─── Framework alias normalization ───
+
+_FRAMEWORK_ALIASES = {
+    "next.js": "nextjs",
+    "node": "nodejs",
+}
+
+
+def normalize_framework(fw: str) -> str:
+    """Normalize framework name to canonical form (e.g., 'next.js' → 'nextjs')."""
+    return _FRAMEWORK_ALIASES.get(fw, fw)
+
+
 # ─── Permission commands per framework (used by settings builder) ───
 
 _JS_COMMANDS = {

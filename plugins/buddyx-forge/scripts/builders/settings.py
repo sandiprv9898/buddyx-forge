@@ -2,7 +2,7 @@
 
 import json
 
-from .frameworks import FW_COMMANDS
+from .frameworks import FW_COMMANDS, normalize_framework
 
 
 def build_settings_json(config: dict) -> str:
@@ -21,7 +21,7 @@ def build_settings_json(config: dict) -> str:
     ask = []
 
     # Framework-aware permission commands
-    framework = config.get("techStack", {}).get("framework", "laravel").lower()
+    framework = normalize_framework(config.get("techStack", {}).get("framework", "laravel").lower())
     fw = FW_COMMANDS.get(framework, {"allow": [], "ask": []})
 
     if perm_level == "conservative":
