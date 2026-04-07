@@ -122,6 +122,8 @@ Each framework gets:
 - Correct file permissions in settings.json
 - Appropriate scan paths for file discovery
 
+**Missing your framework?** [Request it here](https://github.com/sandiprv9898/buddyx-forge/issues/new?template=framework_request.md) — or contribute it yourself (see [CONTRIBUTING.md](CONTRIBUTING.md)).
+
 ## Commands
 
 | Command | Purpose |

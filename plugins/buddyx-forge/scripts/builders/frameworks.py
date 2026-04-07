@@ -37,7 +37,7 @@ FILE_EXT_MAP = {
     "rails": r"\.rb$", "nextjs": r"\.(ts|tsx|js|jsx)$", "react": r"\.(ts|tsx|js|jsx)$",
     "express": r"\.(ts|js)$",
 }
-for _alias in ("nodejs", "node", "fastify", "nestjs", "hono"):
+for _alias in ("next.js", "nodejs", "node", "fastify", "nestjs", "hono"):
     FILE_EXT_MAP[_alias] = r"\.(ts|js)$"
 
 
@@ -52,7 +52,7 @@ SOURCE_DIR_MAP = {
     "react": "src/",
     "express": "src/",
 }
-for _alias in ("nodejs", "node", "fastify", "nestjs", "hono"):
+for _alias in ("next.js", "nodejs", "node", "fastify", "nestjs", "hono"):
     SOURCE_DIR_MAP[_alias] = "src/"
 
 
@@ -87,6 +87,7 @@ find src/lib src/utils -name "*.ts" 2>/dev/null | sort""",
 find src/services -name "*.ts" -o -name "*.js" 2>/dev/null | sort
 find src/middleware -name "*.ts" -o -name "*.js" 2>/dev/null | sort""",
 }
+DISCOVERY_COMMANDS_MAP["next.js"] = DISCOVERY_COMMANDS_MAP["nextjs"]
 for _alias in ("nodejs", "node", "fastify", "nestjs", "hono"):
     DISCOVERY_COMMANDS_MAP[_alias] = DISCOVERY_COMMANDS_MAP["express"]
 
@@ -102,6 +103,7 @@ DB_TOOLS_MAP = {
     "react": "Check for API layer database access. Use `psql`/`mysql` CLI if backend is colocated.",
     "express": "Check for Sequelize/Knex/TypeORM migrations. Use `psql`/`mysql` CLI for direct access.",
 }
+DB_TOOLS_MAP["next.js"] = DB_TOOLS_MAP["nextjs"]
 for _alias in ("nodejs", "node", "fastify", "nestjs", "hono"):
     DB_TOOLS_MAP[_alias] = DB_TOOLS_MAP["express"]
 
@@ -128,6 +130,7 @@ find src/hooks -name "*.ts" 2>/dev/null | sort""",
     "express": """find src/api app/api -name "*.ts" -o -name "*.js" 2>/dev/null | sort
 find src/services -name "*.ts" -o -name "*.js" 2>/dev/null | sort""",
 }
+MAINTENANCE_COMMANDS_MAP["next.js"] = MAINTENANCE_COMMANDS_MAP["nextjs"]
 for _alias in ("nodejs", "node", "fastify", "nestjs", "hono"):
     MAINTENANCE_COMMANDS_MAP[_alias] = MAINTENANCE_COMMANDS_MAP["express"]
 

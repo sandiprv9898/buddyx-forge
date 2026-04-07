@@ -31,7 +31,6 @@ def test(name, condition):
 def make_config(overrides=None):
     config = {
         "projectName": "test-proj",
-        "projectDir": "/tmp",
         "techStack": {
             "language": "php",
             "framework": "laravel",
@@ -48,7 +47,6 @@ def make_config(overrides=None):
             "blockDangerous": True,
             "autoFormat": True,
             "contextInjection": True,
-            "agentTracking": True,
             "blockMigration": False
         },
         "sharedDb": None,
@@ -302,7 +300,7 @@ try:
     with open(os.path.join(outdir, ".claude", "settings.json")) as f:
         settings = json.load(f)
     test("settings.json has buddyxForgeVersion", "buddyxForgeVersion" in settings)
-    test("version is 1.1.0", settings.get("buddyxForgeVersion") == "1.1.0")
+    test("version is 1.1.1", settings.get("buddyxForgeVersion") == "1.1.1")
 finally:
     shutil.rmtree(outdir, ignore_errors=True)
 
@@ -319,12 +317,20 @@ except ValueError:
     test("dangerous sharedDb path rejected", True)
 
 try:
-    cfg = make_config({"sharedDb": "../other-project"})
+    cfg = make_config({"sharedDb": "/var/www/shared-db"})
     cfg_path = write_config(cfg)
     load_config(cfg_path)
     test("valid sharedDb path accepted", True)
 except ValueError:
     test("valid sharedDb path accepted", False)
+
+try:
+    cfg = make_config({"sharedDb": "../other-project"})
+    cfg_path = write_config(cfg)
+    load_config(cfg_path)
+    test("sharedDb path traversal rejected", False)
+except ValueError:
+    test("sharedDb path traversal rejected", True)
 
 
 # ─── Summary ───

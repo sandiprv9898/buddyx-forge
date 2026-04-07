@@ -40,6 +40,11 @@ if echo "$COMMAND" | grep -qE 'chmod\s+(777|0777|a\+rwx)\b'; then
   echo "BLOCKED: chmod 777." >&2; exit 2
 fi
 
+# Supply chain attack — piping remote scripts to shell
+if echo "$COMMAND" | grep -qE '(curl|wget)\s.*\|\s*(bash|sh|zsh|dash)'; then
+  echo "BLOCKED: Piping remote content to shell is a supply chain risk." >&2; exit 2
+fi
+
 # Dangerous system commands
 if echo "$COMMAND" | grep -qE 'sudo\s+(rm|dd|mkfs|fdisk|shred)\b'; then
   echo "BLOCKED: Dangerous sudo operation." >&2; exit 2

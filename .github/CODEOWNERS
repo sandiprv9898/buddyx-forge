@@ -1,0 +1,12 @@
+# Default owner for all files
+* @sandiprv9898
+
+# Generator and tests
+plugins/buddyx-forge/scripts/ @sandiprv9898
+tests/ @sandiprv9898
+
+# Templates
+plugins/buddyx-forge/templates/ @sandiprv9898
+
+# Commands
+plugins/buddyx-forge/commands/ @sandiprv9898

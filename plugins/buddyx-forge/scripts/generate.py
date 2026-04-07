@@ -15,9 +15,13 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).parent.resolve()
 TEMPLATES_DIR = SCRIPT_DIR.parent / "templates"
 
+# Ensure scripts/ is on sys.path for both CLI and test imports
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
 # Re-export for backward compatibility (tests import from generate)
-from validators import load_config
-from builders.settings import build_settings_json
+from validators import load_config  # noqa: E402
+from builders.settings import build_settings_json  # noqa: E402
 from builders.agents import build_review_agent, build_team_lead_agent
 from builders.rules import build_rules_md, build_claude_md
 from builders.orchestrator import build_orchestrator_skill, build_domain_map
@@ -35,22 +39,21 @@ def render_template(template_name: str, replacements: dict) -> str:
     content = tmpl_path.read_text()
     for key, value in replacements.items():
         content = content.replace(f"{{{key}}}", str(value))
-    # Warn about unreplaced placeholders (exclude bash ${VAR} and HTML {{VAR}})
-    remaining = re.findall(r'(?<!\$)(?<!\{)\{[A-Z][A-Z_]+\}(?!\})', content)
+    # Warn about unreplaced placeholders (exclude bash ${VAR}, HTML {{VAR}}, and lowercase doc examples)
+    remaining = re.findall(r'(?<!\$)(?<!\{)\{[A-Z][A-Z_]{2,}\}(?!\})', content)
     if remaining:
         print(f"WARNING: Unreplaced placeholders in {template_name}: {remaining}", file=sys.stderr)
     return content
 
 
-dry_run_count = 0
+_dry_run_counter = [0]
 
 
 def write_file(output_dir: str, rel_path: str, content: str, dry_run: bool = False):
     """Write content to a file, creating directories as needed."""
-    global dry_run_count
     full_path = Path(output_dir) / rel_path
     if dry_run:
-        dry_run_count += 1
+        _dry_run_counter[0] += 1
         print(f"  WOULD CREATE: {full_path}")
         return
     full_path.parent.mkdir(parents=True, exist_ok=True)
@@ -71,8 +74,7 @@ def make_executable(output_dir: str, rel_path: str, dry_run: bool = False):
 
 def generate(config: dict, output_dir: str, dry_run: bool = False):
     """Generate the complete .claude/ directory."""
-    global dry_run_count
-    dry_run_count = 0
+    _dry_run_counter[0] = 0
 
     name = config["projectName"]
     title = name.replace("-", " ").title()
@@ -225,7 +227,6 @@ def generate(config: dict, output_dir: str, dry_run: bool = False):
             write_file(output_dir, f"agent-memory/{name}-migration/MEMORY.md", mem_content, dry_run)
 
     # Query optimizer agent — always for Laravel/Filament, optional for others
-    framework = config.get("techStack", {}).get("framework", "").lower()
     if framework in ("laravel", "django", "rails", "nextjs", "next.js"):
         optimizer_model = {"budget": "sonnet", "balanced": "sonnet", "quality": "opus"}.get(model_budget, "sonnet")
         qo_mem_r, qo_mem_w = _mem_infra("query-optimizer")
@@ -405,7 +406,7 @@ def generate(config: dict, output_dir: str, dry_run: bool = False):
         make_executable(output_dir, script, dry_run)
 
     # Summary
-    file_count = sum(1 for _ in Path(output_dir).rglob("*") if _.is_file()) if not dry_run else dry_run_count
+    file_count = sum(1 for _ in Path(output_dir).rglob("*") if _.is_file()) if not dry_run else _dry_run_counter[0]
     print(f"\n{'DRY RUN — ' if dry_run else ''}buddyx-forge generated for '{name}':")
     print(f"  Domains: {', '.join(domains)}")
     opt_str = f" + {len(optional_agents)} optional ({', '.join(optional_agents)})" if optional_agents else ""

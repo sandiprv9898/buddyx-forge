@@ -38,6 +38,13 @@ def load_config(config_path: str) -> dict:
         if not re.match(r'^[a-z][a-z0-9\-]{1,30}$', domain):
             raise ValueError(f"Invalid domain name: '{domain}'")
 
+    # Validate framework
+    valid_frameworks = {"laravel", "nextjs", "next.js", "react", "django", "go", "rails",
+                        "nodejs", "node", "express", "fastify", "nestjs", "hono"}
+    fw = config.get("techStack", {}).get("framework", "").lower()
+    if fw and fw not in valid_frameworks:
+        raise ValueError(f"Unsupported framework: '{fw}'. Supported: {sorted(valid_frameworks)}")
+
     # Validate formatter command (security)
     formatter = config.get("techStack", {}).get("formatter", "")
     if formatter and not re.match(r'^[a-zA-Z0-9/_\-. ]+$', formatter):
@@ -60,9 +67,19 @@ def load_config(config_path: str) -> dict:
     if config.get("evalLevel", "none") not in valid_eval_levels:
         raise ValueError(f"Invalid evalLevel: '{config.get('evalLevel')}'. Must be one of: {valid_eval_levels}")
 
+    # Validate hooks sub-keys
+    valid_hook_keys = {"blockCommits", "blockDangerous", "autoFormat", "contextInjection", "agentTracking", "blockMigration"}
+    hooks = config.get("hooks", {})
+    unknown_hooks = set(hooks.keys()) - valid_hook_keys
+    if unknown_hooks:
+        raise ValueError(f"Unknown hook keys: {unknown_hooks}. Valid keys: {sorted(valid_hook_keys)}")
+
     # Validate sharedDb path if provided
     shared_db = config.get("sharedDb", "")
-    if shared_db and not re.match(r'^[a-zA-Z0-9/_\-. ]+$', shared_db):
-        raise ValueError(f"Invalid sharedDb path: '{shared_db}'. Contains unsafe characters.")
+    if shared_db:
+        if not re.match(r'^[a-zA-Z0-9/_\-. ]+$', shared_db):
+            raise ValueError(f"Invalid sharedDb path: '{shared_db}'. Contains unsafe characters.")
+        if '..' in shared_db:
+            raise ValueError(f"Invalid sharedDb path: '{shared_db}'. Path traversal (..) not allowed.")
 
     return config

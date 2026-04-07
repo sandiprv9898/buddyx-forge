@@ -140,7 +140,7 @@ def build_settings_json(config: dict) -> str:
         "env": env,
         "plansDirectory": ".claude/plans",
         "autoMemoryEnabled": True,
-        "buddyxForgeVersion": "1.1.0",
+        "buddyxForgeVersion": "1.1.1",
     }
 
     if worktree_symlinks:
