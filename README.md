@@ -379,7 +379,7 @@ Run the built-in test suite:
 python3 tests/test_generator.py
 ```
 
-47 tests covering: config validation, all 7 frameworks, optional agents, memory flags, framework-aware permissions, enum validation, conservative permissions, hookify migration rules, version stamp, sharedDb path validation.
+60 tests covering: config validation, all 7 frameworks, optional agents, memory flags, framework-aware permissions, enum validation, conservative/permissive permissions, hookify migration rules, version stamp, sharedDb path validation, framework validation, hooks key validation, next.js alias resolution, commitPolicy=claude, dry run mode.
 
 ## Requirements
 
