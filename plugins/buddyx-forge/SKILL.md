@@ -18,6 +18,8 @@ Multi-agent development system generator for any project.
 | `/buddyx-forge:health` | Validate setup integrity, score 0-100. |
 | `/buddyx-forge:add-domain` | Add a new domain agent to existing setup. |
 | `/buddyx-forge:dashboard` | Open agent metrics dashboard in browser. |
+| `/buddyx-forge:upgrade` | Upgrade setup to latest version, preserving memory and customizations. |
+| `/buddyx-forge:export-config` | Export config as `.buddyx-forge.json` for team sharing. |
 | `/buddyx-forge:dream` | Memory consolidation — clean stale entries, promote hypotheses. |
 
 ## Quick Start

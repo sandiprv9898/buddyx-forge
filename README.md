@@ -1,5 +1,7 @@
 # buddyx-forge
 
+[![Tests](https://github.com/sandiprv9898/buddyx-forge/actions/workflows/test.yml/badge.svg)](https://github.com/sandiprv9898/buddyx-forge/actions/workflows/test.yml)
+
 Generate a complete multi-agent development system for any project. One command, 50+ files, ready to use.
 
 Supports **7 frameworks**: Laravel, Next.js, React, Node.js, Django, Go, Rails.
@@ -11,6 +13,59 @@ Without buddyx-forge, setting up Claude Code for a real project means manually w
 **With buddyx-forge**, you answer 10 questions and get a production-ready system: domain-specialized agents that know your codebase structure, safety hooks that block destructive commands, a code review agent with framework-specific checklists, self-improving shared memory, and metrics tracking. The setup that took hours now takes 2 minutes.
 
 **See what it generates:** Browse the [examples/](examples/) directory for complete Laravel and Django output.
+
+## What is Multi-Agent Development?
+
+Instead of one AI assistant handling everything, multi-agent splits the work into specialists:
+
+- **Domain agents** know specific parts of your codebase (billing, auth, users). They own files and follow rules for their area.
+- **Infrastructure agents** handle cross-cutting tasks — database inspection, code review, file discovery — without modifying code.
+- **An orchestrator** reads your request, detects which domain it belongs to, and dispatches the right agent automatically.
+- **Shared memory** lets agents learn from each other. When one agent discovers a pattern, others can use it too.
+
+**Why does this work better?** Each agent has a focused context window. A billing agent doesn't waste tokens reading authentication code. A review agent has a framework-specific checklist, not generic advice. The result: faster, more accurate responses with domain expertise built in.
+
+**What buddyx-forge does:** Generates all of this — agents, orchestrator, rules, hooks, memory — configured for your specific framework and project structure. You get a working multi-agent system in 2 minutes instead of building one from scratch.
+
+## Real-World Examples
+
+### Fix a bug
+
+```
+fix: PaymentService — returns 500 when amount is zero
+```
+
+What happens behind the scenes:
+1. Orchestrator reads the request, detects "Payment" → **billing domain**
+2. Dispatches `myapp-billing` agent (knows billing files, eager loading rules)
+3. Agent reads `PaymentService.php`, finds the bug, applies fix
+4. Orchestrator auto-dispatches `myapp-review` — checks for N+1 queries, security, code style
+5. Review agent reports: PASS (0 violations)
+
+### Audit before deploy
+
+```
+audit: all modules
+```
+
+1. Orchestrator sees "all" → dispatches `myapp-team-lead`
+2. Team-lead dispatches all domain agents **in parallel** (max 5 at once)
+3. Each agent audits its files — code quality, security, performance
+4. Team-lead collects results → dispatches `myapp-review` for final check
+5. You get a summary table: which modules passed, which have issues
+
+### Cross-domain feature
+
+```
+add: export student grades as PDF with billing invoice attached
+```
+
+1. Orchestrator detects two domains: **students** + **billing** → dispatches `myapp-team-lead`
+2. Team-lead dispatches `myapp-discovery` first (research phase, read-only)
+3. Discovery agent finds relevant files, reports back
+4. Team-lead dispatches `myapp-db` → checks schema for both tables
+5. Dispatches domain agents sequentially (billing depends on student data)
+6. Final `myapp-review` checks everything
 
 ## Install
 
@@ -76,6 +131,8 @@ Each framework gets:
 | `/buddyx-forge:health` | Validate setup integrity (score 0-100) |
 | `/buddyx-forge:add-domain X` | Add a new domain agent |
 | `/buddyx-forge:dashboard` | Open agent metrics dashboard in browser |
+| `/buddyx-forge:upgrade` | Upgrade setup to latest version, preserving customizations |
+| `/buddyx-forge:export-config` | Export config as `.buddyx-forge.json` for team sharing |
 | `/buddyx-forge:dream` | Memory consolidation — clean stale entries, promote hypotheses |
 
 ## Setup Questions
@@ -189,10 +246,13 @@ python3 tests/test_generator.py
 ## Architecture
 
 ```
-Plugin (48 files)
-├── Generator: Python script (1,200+ lines, stdlib-only)
+Plugin (55+ files)
+├── Generator: 7 Python modules (1,588 lines total, stdlib-only)
+│   ├── generate.py — CLI + orchestration (436 lines)
+│   ├── validators.py — config validation (68 lines)
+│   └── builders/ — settings, agents, rules, orchestrator, frameworks
 ├── Templates: 10 agent + 11 hook + 4 skill templates
-├── Commands: setup, scan, health, add-domain, dashboard, dream
+├── Commands: setup, quick, scan, health, add-domain, dashboard, upgrade, export-config, dream
 ├── References: detect-stack, customize-guide, 7 framework packs, tech-recommendations
 └── Marketplace: plugin.json + marketplace.json
 
@@ -219,6 +279,13 @@ buddyx-forge generated for 'school':
 ```
 
 ## Changelog
+
+### v1.1.1 (2026-04-07)
+- Split generator into 7 focused modules (was 1,541 lines in one file)
+- Added `/buddyx-forge:upgrade` and `/buddyx-forge:export-config` commands
+- Added "What is multi-agent?" and real-world examples to README
+- Added GitHub Actions CI, issue templates, repo topics
+- Added `--dry-run` to dream command, tempfile for setup config
 
 ### v1.1.0 (2026-04-03)
 - Framework-aware permissions (Laravel, Django, Go, Rails, JS/TS)

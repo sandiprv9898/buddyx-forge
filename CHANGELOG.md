@@ -4,6 +4,27 @@ All notable changes to buddyx-forge are documented here.
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-04-07
+
+### Added
+- `/buddyx-forge:upgrade` command — upgrade setup preserving agent-memory and customizations
+- `/buddyx-forge:export-config` command — export config as `.buddyx-forge.json` for team sharing
+- `--dry-run` flag for dream command
+- GitHub issue templates (bug report, feature request, framework request)
+- GitHub Actions CI workflow
+- GitHub repo description and topics
+
+### Changed
+- Split `generate.py` (1,541 lines) into 7 focused modules:
+  - `validators.py` — config validation
+  - `builders/frameworks.py` — framework maps and checklists
+  - `builders/settings.py` — settings.json builder
+  - `builders/agents.py` — review and team-lead agent builders
+  - `builders/orchestrator.py` — orchestrator skill and domain-map builders
+  - `builders/rules.py` — RULES.md and CLAUDE.md builders
+  - `generate.py` — CLI + orchestration (436 lines)
+- Setup command uses `mktemp` instead of predictable `/tmp/buddyx-forge-config.json`
+
 ### Fixed
 - Hookify rules no longer block migrations for solo Laravel projects (only when `sharedDb` is configured)
 - `customize-guide.md` updated to match current generator workflow (no longer references removed Step 5)
@@ -22,7 +43,7 @@ All notable changes to buddyx-forge are documented here.
 - Setup command description updated for all 7 frameworks
 - README skill line counts corrected (audit: 862, diagram: 955)
 
-### Added
+### Added (from 1.1.0 fixes)
 - `LICENSE` file (MIT)
 - `CONTRIBUTING.md` with framework addition guide
 - `CHANGELOG.md` (this file)
@@ -41,7 +62,7 @@ All notable changes to buddyx-forge are documented here.
 - AGENT_TYPE sanitization in all 6 eval hooks
 - Conservative permission level includes framework commands in `ask` list
 
-### Changed
+### Changed (from 1.1.0 fixes)
 - Safety guard expanded to cover more sensitive paths and chmod patterns
 - Templates de-Laravelified — discovery, db, maintenance agents now framework-aware
 - Audit skill consumes `{DOMAIN_LIST}` instead of hardcoded UMS HR modules
