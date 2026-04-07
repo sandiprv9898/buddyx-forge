@@ -333,6 +333,122 @@ except ValueError:
     test("sharedDb path traversal rejected", True)
 
 
+# === Framework Validation ===
+print("\n=== Framework Validation ===")
+
+try:
+    cfg = make_config()
+    cfg["techStack"]["framework"] = "flutter"
+    cfg_path = write_config(cfg)
+    load_config(cfg_path)
+    test("unsupported framework rejected", False)
+except ValueError:
+    test("unsupported framework rejected", True)
+
+try:
+    cfg = make_config()
+    cfg["techStack"]["framework"] = "next.js"
+    cfg_path = write_config(cfg)
+    load_config(cfg_path)
+    test("next.js accepted as valid framework", True)
+except ValueError:
+    test("next.js accepted as valid framework", False)
+
+
+# === Hooks Key Validation ===
+print("\n=== Hooks Key Validation ===")
+
+try:
+    cfg = make_config({"hooks": {"deleteEverything": True}})
+    cfg_path = write_config(cfg)
+    load_config(cfg_path)
+    test("unknown hook key rejected", False)
+except ValueError:
+    test("unknown hook key rejected", True)
+
+try:
+    cfg = make_config({"hooks": {"blockDangerous": True, "autoFormat": True}})
+    cfg_path = write_config(cfg)
+    load_config(cfg_path)
+    test("valid hook keys accepted", True)
+except ValueError:
+    test("valid hook keys accepted", False)
+
+
+# === next.js Alias Resolution ===
+print("\n=== next.js Alias Resolution ===")
+
+outdir = tempfile.mkdtemp()
+try:
+    cfg = make_config()
+    cfg["techStack"]["framework"] = "next.js"
+    generate(cfg, os.path.join(outdir, ".claude"))
+
+    # Check RULES.md has Next.js section (not Laravel)
+    rules_path = os.path.join(outdir, ".claude", "skills", "test-proj", "RULES.md")
+    rules = open(rules_path).read()
+    test("next.js: RULES.md has Next.js section", "## Next" in rules)
+    test("next.js: RULES.md has no Laravel section", "## Laravel" not in rules)
+
+    # Check settings.json has correct permissions
+    with open(os.path.join(outdir, ".claude", "settings.json")) as f:
+        settings = json.load(f)
+    perms = str(settings.get("permissions", {}))
+    test("next.js: has npx in permissions", "npx" in perms)
+finally:
+    shutil.rmtree(outdir, ignore_errors=True)
+
+
+# === commitPolicy=claude ===
+print("\n=== commitPolicy=claude ===")
+
+outdir = tempfile.mkdtemp()
+try:
+    cfg = make_config({"commitPolicy": "claude"})
+    generate(cfg, os.path.join(outdir, ".claude"))
+
+    with open(os.path.join(outdir, ".claude", "settings.json")) as f:
+        settings = json.load(f)
+    perms = str(settings.get("permissions", {}).get("allow", []))
+    hooks_str = json.dumps(settings.get("hooks", {}))
+
+    test("commitPolicy=claude: git commit in allow", "git commit" in perms)
+    test("commitPolicy=claude: no block-git-commit hook", "block-git-commit" not in hooks_str)
+    test("commitPolicy=claude: no block-git-commit.sh script",
+         not os.path.exists(os.path.join(outdir, ".claude", "scripts", "block-git-commit.sh")))
+finally:
+    shutil.rmtree(outdir, ignore_errors=True)
+
+
+# === Permissive Permissions ===
+print("\n=== Permissive Permissions ===")
+
+outdir = tempfile.mkdtemp()
+try:
+    cfg = make_config({"permissionLevel": "permissive"})
+    generate(cfg, os.path.join(outdir, ".claude"))
+    with open(os.path.join(outdir, ".claude", "settings.json")) as f:
+        settings = json.load(f)
+    allow = str(settings["permissions"]["allow"])
+    test("permissive: framework commands in allow (not ask)", "php artisan" in allow)
+finally:
+    shutil.rmtree(outdir, ignore_errors=True)
+
+
+# === Dry Run Mode ===
+print("\n=== Dry Run Mode ===")
+
+outdir = tempfile.mkdtemp()
+try:
+    cfg = make_config()
+    generate(cfg, outdir, dry_run=True)
+    # Dry run should NOT create files
+    file_count = sum(1 for _ in os.listdir(outdir)) if os.path.exists(outdir) else 0
+    test("dry run creates no files", file_count == 0)
+finally:
+    shutil.rmtree(outdir, ignore_errors=True)
+
+
 # ─── Summary ───
 
 print(f"\n{'='*50}")
