@@ -6,70 +6,25 @@ All notable changes to buddyx-forge are documented here.
 
 ## [1.1.1] - 2026-04-07
 
+### Fixed
+- **plugin.json missing 4 commands** — `upgrade`, `export-config`, `prompt-guide`, `reverse` now registered and discoverable by Claude Code
+- **Version mismatch** — marketplace.json, plugin.json, and settings.py all synced to 1.1.1
+- **next.js alias inconsistency** — `"next.js"` (with dot) now resolves identically to `"nextjs"` across all framework maps via `normalize_framework()`. Previously, auto-detected `"next.js"` silently fell through to Laravel defaults in FILE_EXT_MAP, SOURCE_DIR_MAP, DISCOVERY_COMMANDS_MAP, DB_TOOLS_MAP, and MAINTENANCE_COMMANDS_MAP
+- **SharedDb path traversal** — `../` segments now blocked (previously `../../../etc/shadow` passed validation)
+- **Global mutable `dry_run_count`** — replaced with `FileCounter` class passed through function arguments
+- **Framework variable shadowing** — `framework` set once at top of `generate()` instead of re-read mid-function
+
 ### Added
-- `/buddyx-forge:upgrade` command — upgrade setup preserving agent-memory and customizations
-- `/buddyx-forge:export-config` command — export config as `.buddyx-forge.json` for team sharing
-- `--dry-run` flag for dream command
-- GitHub issue templates (bug report, feature request, framework request)
-- GitHub Actions CI workflow
-- GitHub repo description and topics
+- `normalize_framework()` helper — canonicalizes framework names (`"next.js"` → `"nextjs"`, `"node"` → `"nodejs"`)
+- Framework validation — unsupported frameworks (e.g., `"flutter"`, `"spring-boot"`) now raise `ValueError` instead of silently defaulting to Laravel
+- Hook config key validation — unknown keys (e.g., `"agentTracking"`) now produce a warning on stderr
+- Safety guard blocks `curl | bash` supply chain attacks, `eval $(curl ...)`, and environment variable exfiltration via `curl`/`wget`
+- `.editorconfig` for consistent formatting across editors
+- 13 new tests covering: framework validation (3), hooks key warning (1), sharedDb path traversal (2), next.js alias consistency (3), normalize_framework (4). Test count: 47 → 60
 
 ### Changed
-- Split `generate.py` (1,541 lines) into 7 focused modules:
-  - `validators.py` — config validation
-  - `builders/frameworks.py` — framework maps and checklists
-  - `builders/settings.py` — settings.json builder
-  - `builders/agents.py` — review and team-lead agent builders
-  - `builders/orchestrator.py` — orchestrator skill and domain-map builders
-  - `builders/rules.py` — RULES.md and CLAUDE.md builders
-  - `generate.py` — CLI + orchestration (436 lines)
-- Setup command uses `mktemp` instead of predictable `/tmp/buddyx-forge-config.json`
-
-### Fixed
-- Hookify rules no longer block migrations for solo Laravel projects (only when `sharedDb` is configured)
-- `customize-guide.md` updated to match current generator workflow (no longer references removed Step 5)
-- Health check (Check 12) now uses framework-appropriate scan paths instead of hardcoded `app/`
-- Duplicate step numbering (`# 11.`) in generate.py
-- `Write|Edit` hook matchers split into separate entries (pipe is not glob OR)
-- Conservative permission level now includes framework commands in `ask` list
-- Shell operator precedence bug in extract-learnings and auto-promote-learnings hooks
-- Path containment checks use prefix match instead of substring match
-- grep injection in auto-promote-learnings escaped
-- `{RelevantTest}` placeholder replaced with `<TestName>` in domain agent template
-- Agent templates no longer reference `block-git-commit.sh` when `commitPolicy=claude`
-- Agent templates no longer reference `MEMORY.md` when `agentMemory=false`
-- Optional agents (query-optimizer, mcp-dev, migration) now appear in orchestrator inventory
-- Review agent description no longer claims auto-triggering
-- Setup command description updated for all 7 frameworks
-- README skill line counts corrected (audit: 862, diagram: 955)
-
-### Added (from 1.1.0 fixes)
-- `LICENSE` file (MIT)
-- `CONTRIBUTING.md` with framework addition guide
-- `CHANGELOG.md` (this file)
-- `buddyx-forge.example.json` — complete config reference
-- `examples/` directory with generated output for Laravel and Django
-- `buddyxForgeVersion: 1.1.0` stamp in generated `settings.json`
-- `block-migration.sh.tmpl` — prevents migration creation in shared-DB projects
-- `jq` availability checks in all hook scripts (fail-closed for safety, fail-open for informational)
-- Enum validation for `modelBudget`, `permissionLevel`, `commitPolicy`, `evalLevel`
-- `sharedDb` path sanitization against injection
-- Plugin command declarations in `plugin.json`
-- "Why?" section in README
-- 6 framework-aware template variables (FILE_EXT_FILTER, DISCOVERY_COMMANDS, DB_TOOLS, etc.)
-- Framework-specific hookify rules for Django, Go, Rails, JS/TS
-- `flock` file locking in auto-promote-learnings hook
-- AGENT_TYPE sanitization in all 6 eval hooks
-- Conservative permission level includes framework commands in `ask` list
-
-### Changed (from 1.1.0 fixes)
-- Safety guard expanded to cover more sensitive paths and chmod patterns
-- Templates de-Laravelified — discovery, db, maintenance agents now framework-aware
-- Audit skill consumes `{DOMAIN_LIST}` instead of hardcoded UMS HR modules
-- Diagram skill uses `{PROJECT_TITLE}` instead of hardcoded "UMS HR System"
-- Validate-agent-output hook only runs PHP checks for Laravel framework
-- CLAUDE.md FQCN rule only included for Laravel
-- RULES.md `$guarded`/`$fillable` rule only included for Laravel
+- Test config no longer includes deprecated `projectDir` and `agentTracking` keys
+- Placeholder warning regex restored to uppercase-only (was incorrectly catching template examples like `{Module}`)
 
 ## [1.1.0] - 2026-04-03
 
